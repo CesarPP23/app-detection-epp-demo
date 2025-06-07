@@ -1,0 +1,34 @@
+# Ignorar archivos de entorno virtual
+venv/
+.env
+
+# Ignorar archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignorar archivos temporales y de sistema
+*.swp
+*.bak
+*.tmp
+.DS_Store
+
+# Ignorar imágenes comunes
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.webp
+
+# Ignorar archivos de modelos
+*.pt
+
+# Ignorar archivos de log
+*.log
+
+# Ignorar archivos de librerías grandes
+*.dll
+*.lib
+*.pyd

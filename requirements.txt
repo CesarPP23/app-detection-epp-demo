@@ -1,0 +1,11 @@
+opencv-python==4.11.0.86      # Captura y procesamiento de imágenes
+torch==2.7.0                  # Motor de inferencia para YOLOv7 (CPU)
+numpy==2.2.0                  # Operaciones numéricas (matrices, imagen)
+requests==2.31.0              # Envío HTTP de imágenes al backend
+fastapi==0.110.0              # API REST backend en la nube/local
+uvicorn==0.29.0               # Servidor ASGI para FastAPI
+sqlalchemy==2.0.29            # ORM para manipular la base de datos
+pydantic==2.7.1               # Validación de datos para FastAPI
+python-multipart==0.0.9       # Para recibir imágenes en FastAPI
+ultralytics==8.3.138
+
