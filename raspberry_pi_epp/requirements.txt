@@ -6,8 +6,9 @@ Pillow==10.1.0                # Manipulación de imágenes
 torch==2.1.1
 torchvision==0.16.1
 ultralytics==8.3.138
-sqlite3
-numpy
+#sqlite3
+numpy==1.26.4
+scikit-learn==1.4.2           # Algoritmos de aprendizaje automático
 requests
 python-dotenv
 python-multipart

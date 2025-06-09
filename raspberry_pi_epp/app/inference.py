@@ -112,9 +112,9 @@ class YOLOInference:
 
         # Verificar si hay detecciones
         if result.boxes is not None and len(result.boxes) > 0:
-            boxes = result.boxes.xyxy.cpu().numpy()  # Coordenadas x1,y1,x2,y2
-            confidences = result.boxes.conf.cpu().numpy()  # Confianzas
-            classes = result.boxes.cls.cpu().numpy()  # Clases
+            boxes = result.boxes.xyxy.cpu().np()  # Coordenadas x1,y1,x2,y2
+            confidences = result.boxes.conf.cpu().np()  # Confianzas
+            classes = result.boxes.cls.cpu().np()  # Clases
 
             for i, (box, conf, cls) in enumerate(zip(boxes, confidences, classes)):
                 cls_id = int(cls)

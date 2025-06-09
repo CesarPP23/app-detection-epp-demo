@@ -7,14 +7,22 @@ MODELS_DIR = BASE_DIR / "models"
 DATA_DIR = BASE_DIR / "data"
 LOGS_DIR = BASE_DIR / "logs"
 
-# Configuración de la cámara
+# Configuración de la cámara (se usara el video de prueba)
 CAMERA_CONFIG = {
+    "source": r'D:\app-detection-epp-demo\video\IMG_9704.mp4',  # 0 para cámara USB, o ruta para archivo de video
+    # "width": 640,  # Ancho de la imagen
+    # "height": 480,  # Alto de la imagen
+    "fps": 30,  # Frames por segundo
+    "scale_factor": 0.2
+    
+}
+# Configuración de la cámara
+CAMERA_CONFIG_2 = {
     "source": 0,  # 0 para cámara USB, o ruta para archivo de video
     "width": 640,  # Ancho de la imagen
     "height": 480,  # Alto de la imagen
     "fps": 30,  # Frames por segundo
 }
-
 # Configuración del modelo YOLO
 MODEL_CONFIG = {
     "model_path": MODELS_DIR / "best.pt",
@@ -22,10 +30,10 @@ MODEL_CONFIG = {
     "device": "cpu",  # "cpu" o "cuda" si tienes GPU
     "classes_to_detect": [0, 1, 2, 3],  # IDs de las clases EPP que detectar
     "class_names": {
-        0: "latex_gloves",
-        1: "hairnet", 
-        2: "mask",
-        3: "lab_coat",
+        0: "Mascarilla",
+        1: "Cofia", 
+        2: "Bata",
+        3: "Guantes_Latex",
     }
 }
 
