@@ -30,10 +30,10 @@ MODEL_CONFIG = {
     "device": "cpu",  # "cpu" o "cuda" si tienes GPU
     "classes_to_detect": [0, 1, 2, 3],  # IDs de las clases EPP que detectar
     "class_names": {
-        0: "Mascarilla",
-        1: "Cofia", 
-        2: "Bata",
-        3: "Guantes_Latex",
+        0: "mascarilla",    # minúsculas
+        1: "cofia",         # minúsculas
+        2: "bata",          # minúsculas
+        3: "guantes",       # sin guión bajo
     }
 }
 
