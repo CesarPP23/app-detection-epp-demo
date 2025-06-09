@@ -1,0 +1,18 @@
+fastapi==0.110.0              # API REST backend en la nube/local
+uvicorn==0.29.0               # Servidor ASGI para FastAPI
+websockets==15.0.1            # Comunicación en tiempo real con el backend
+opencv-python==4.11.0.86      # Captura y procesamiento de imágenes
+Pillow==10.1.0                # Manipulación de imágenes
+torch==2.1.1
+torchvision==0.16.1
+ultralytics==8.3.138
+sqlite3
+numpy
+requests
+python-dotenv
+python-multipart
+psutil==5.9.6
+aiofiles==24.1.0
+asyncio
+
+

@@ -8,4 +8,4 @@ sqlalchemy==2.0.29            # ORM para manipular la base de datos
 pydantic==2.7.1               # Validación de datos para FastAPI
 python-multipart==0.0.9       # Para recibir imágenes en FastAPI
 ultralytics==8.3.138
-
+websockets==15.0.1

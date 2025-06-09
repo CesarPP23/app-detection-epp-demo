@@ -1,12 +1,13 @@
 # Ignorar archivos de entorno virtual
 venv/
 .env
+notebooks/
 
 # Ignorar archivos compilados de Python
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.ipynb
 # Ignorar archivos temporales y de sistema
 *.swp
 *.bak
@@ -21,7 +22,12 @@ __pycache__/
 *.bmp
 *.tiff
 *.webp
-
+*.svg
+# Ignorar archivos de audio y video
+*.mp3
+*.wav 
+*.mp4
+*.avi
 # Ignorar archivos de modelos
 *.pt
 
@@ -32,3 +38,13 @@ __pycache__/
 *.dll
 *.lib
 *.pyd
+
+# Ignorar archivos database
+*.db
+# Ignorar archivos de configuración de IDEs
+.idea/
+#Ignorar archivos log
+*.log
+#Ignorar archivos dockerfile
+*.dockerfile
+*.yml
