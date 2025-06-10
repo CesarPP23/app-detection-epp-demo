@@ -197,30 +197,43 @@ class WebSocketClient:
         """
         if self.is_connected and self.websocket:
             try:
-                # Preparar mensaje
+                # ✅ ESTRUCTURA CORRECTA - igual que test_connection.py
                 message = {
                     "type": "detection",
-                    "timestamp": time.time(),
-                    "data": detection_data
+                    "raspberry_id": "raspberrypi001",  # ← Agregar aquí también por compatibilidad
+                    "data": {
+                        "raspberry_id": "raspberrypi001",  # ← CLAVE: debe estar dentro de "data"
+                        "timestamp": detection_data.get("timestamp", time.time()),
+                        "total_detections": detection_data.get("total_detections", 0),
+                        "detections": detection_data.get("detections", []),
+                        "compliance_status": detection_data.get("compliance_status", {}),
+                        # Agregar campos adicionales del detection_result
+                        "total_persons": len([d for d in detection_data.get("detections", []) if d.get("class_name") == "person"]),
+                        "persons_with_epp": 0,  # Calcular según lógica
+                        "compliance_percentage": detection_data.get("compliance_status", {}).get("compliance_percentage", 0)
+                    }
                 }
 
-                # Enviar de forma asíncrona
-                asyncio.run_coroutine_threadsafe(
-                    self.websocket.send(json.dumps(message)),
-                    self.websocket.loop if hasattr(self.websocket, 'loop') else asyncio.get_event_loop()
-                )
+                # ✅ ENVÍO SÍNCRONO más confiable
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                async def send_message():
+                    await self.websocket.send(json.dumps(message))
+                
+                loop.run_until_complete(send_message())
+                loop.close()
 
-                self.logger.debug("Datos de detección enviados")
+                self.logger.info(f"✅ Datos enviados: Compliance {message['data']['compliance_percentage']}%")
                 return True
 
             except Exception as e:
-                self.logger.error(f"Error enviando datos: {e}")
+                self.logger.error(f"❌ Error enviando datos: {e}")
 
         # Si no hay conexión, agregar a la cola
         self.queue_manager.add_to_queue(detection_data)
-        self.logger.debug("Datos agregados a la cola (sin conexión)")
+        self.logger.debug("📦 Datos agregados a la cola (sin conexión)")
         return False
-
     def send_status_update(self, status_data: Dict) -> bool:
         """
         Envía actualización de estado al servidor
@@ -278,16 +291,16 @@ class WebSocketClient:
                         # Marcar elementos como enviados o fallidos
                         if sent_ids:
                             self.queue_manager.mark_as_sent(sent_ids)
-                            self.logger.info(f"Enviados {len(sent_ids)} elementos de la cola")
+                            self.logger.info(f"📤 Enviados {len(sent_ids)} elementos de la cola")
 
                         if failed_ids:
                             self.queue_manager.mark_as_failed(failed_ids)
 
-                # Esperar antes del siguiente intento
-                time.sleep(self.config['retry_interval'])
+                # ✅ CORREGIR: usar reconnect_interval en lugar de retry_interval
+                time.sleep(self.config.get('reconnect_interval', 10))
 
             except Exception as e:
-                self.logger.error(f"Error en sender de cola: {e}")
+                self.logger.error(f"❌ Error en sender de cola: {e}")
                 time.sleep(5)
 
     def get_connection_status(self) -> Dict:

@@ -241,3 +241,43 @@ class QueueManager:
 
         except Exception as e:
             self.logger.error(f"Error en limpieza de cola: {e}")
+
+# Función auxiliar para probar la cola
+def test_queue(queue_config: dict) -> bool:
+    """
+    Prueba el funcionamiento de la cola
+    
+    Args:
+        queue_config: Configuración de la cola
+        
+    Returns:
+        True si la cola funciona correctamente
+    """
+    try:
+        queue = QueueManager(queue_config)
+        
+        # Agregar datos de prueba
+        test_data = {
+            'timestamp': time.time(),
+            'detections': [],
+            'test': True
+        }
+        
+        success = queue.add_to_queue(test_data)
+        if not success:
+            return False
+        
+        # Obtener datos
+        batch = queue.get_next_batch(1)
+        if len(batch) == 0:
+            return False
+        
+        # Marcar como enviado
+        queue_ids = [item['queue_id'] for item in batch]
+        queue.mark_as_sent(queue_ids)
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error probando cola: {e}")
+        return False

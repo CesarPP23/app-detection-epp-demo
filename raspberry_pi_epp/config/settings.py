@@ -7,14 +7,22 @@ MODELS_DIR = BASE_DIR / "models"
 DATA_DIR = BASE_DIR / "data"
 LOGS_DIR = BASE_DIR / "logs"
 
-# Configuración de la cámara
+# Configuración de la cámara (se usara el video de prueba)
 CAMERA_CONFIG = {
+    "source": r'C:\Users\cesar\app-detection-epp-demo\notebooks\videos\prueba2.mp4',  # 0 para cámara USB, o ruta para archivo de video
+    # "width": 640,  # Ancho de la imagen
+    # "height": 480,  # Alto de la imagen
+    "fps": 30,  # Frames por segundo
+    "scale_factor": 0.2
+    
+}
+# Configuración de la cámara
+CAMERA_CONFIG_2 = {
     "source": 0,  # 0 para cámara USB, o ruta para archivo de video
     "width": 640,  # Ancho de la imagen
     "height": 480,  # Alto de la imagen
     "fps": 30,  # Frames por segundo
 }
-
 # Configuración del modelo YOLO
 MODEL_CONFIG = {
     "model_path": MODELS_DIR / "best.pt",
@@ -22,16 +30,16 @@ MODEL_CONFIG = {
     "device": "cpu",  # "cpu" o "cuda" si tienes GPU
     "classes_to_detect": [0, 1, 2, 3],  # IDs de las clases EPP que detectar
     "class_names": {
-        0: "latex_gloves",
-        1: "hairnet", 
-        2: "mask",
-        3: "lab_coat",
+        0: "mascarilla",    # minúsculas
+        1: "cofia",         # minúsculas
+        2: "bata",          # minúsculas
+        3: "guantes",       # sin guión bajo
     }
 }
 
 # Configuración del WebSocket (conexión a la nube)
 WEBSOCKET_CONFIG = {
-    "server_url": "ws://localhost:8001/ws",  # URL del backend en la nube
+    "server_url": "ws://127.0.0.1:8000/ws",  # URL del backend en la nube
     "reconnect_interval": 5,  # Segundos entre intentos de reconexión
     "max_reconnect_attempts": 10,  # Máximo número de intentos
     "ping_interval": 30,  # Segundos entre pings para mantener conexión
@@ -66,5 +74,6 @@ ALERT_CONFIG = {
 }
 
 # Variables de entorno (puedes sobreescribir en .env)
+# Variables de entorno (puedes sobreescribir en .env)
 CLOUD_BACKEND_URL = os.getenv("CLOUD_BACKEND_URL", WEBSOCKET_CONFIG["server_url"])
-DEVICE_ID = os.getenv("DEVICE_ID", "raspberry_pi_001")
+DEVICE_ID = os.getenv("DEVICE_ID", "raspberrypi001")  # ← Cambiar para que coincida con Firestore
