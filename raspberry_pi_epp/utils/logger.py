@@ -40,7 +40,8 @@ def setup_logger(name: str, log_file: Path, level: str = "INFO"):
     file_handler = logging.handlers.RotatingFileHandler(
         log_file,
         maxBytes=10*1024*1024,  # 10MB
-        backupCount=5  # Mantener 5 archivos de respaldo
+        backupCount=5,  # Mantener 5 archivos de respaldo
+        encoding='utf-8'
     )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
