@@ -279,12 +279,26 @@ def get_system_status():
     except:
         pass
 
+    # Información mejorada de la cámara
+    camera_info = None
+    if camera_manager:
+        camera_info = camera_manager.get_camera_info()
+        # Agregar información adicional sobre dimensiones
+        if camera_info.get("status") == "Activa":
+            original_dims = camera_manager.get_original_dimensions()
+            processed_dims = camera_manager.get_frame_dimensions()
+            camera_info.update({
+                "original_dimensions": f"{original_dims[0]}x{original_dims[1]}",
+                "processed_dimensions": f"{processed_dims[0]}x{processed_dims[1]}",
+                "scale_factor": camera_manager.scale_factor
+            })
+
     return {
         "device_id": DEVICE_ID,
         "timestamp": time.time(),
         "uptime": time.time() - system_state["start_time"],
         "monitoring_active": system_state["is_monitoring"],
-        "camera_status": camera_manager.get_camera_info() if camera_manager else None,
+        "camera_status": camera_info,
         "model_status": yolo_inference.get_model_info() if yolo_inference else None,
         "websocket_status": websocket_client.get_connection_status() if websocket_client else None,
         "queue_stats": queue_manager.get_queue_stats() if queue_manager else None,

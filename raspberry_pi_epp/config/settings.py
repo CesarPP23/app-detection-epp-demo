@@ -10,6 +10,7 @@ LOGS_DIR = BASE_DIR / "logs"
 # Configuración de la cámara (se usara el video de prueba)
 CAMERA_CONFIG = {
     "source": r'C:\Users\cesar\app-detection-epp-demo\notebooks\videos\prueba2.mp4',  # 0 para cámara USB, o ruta para archivo de video
+
     # "width": 640,  # Ancho de la imagen
     # "height": 480,  # Alto de la imagen
     "fps": 30,  # Frames por segundo
