@@ -1,6 +1,7 @@
 # Ignorar archivos de entorno virtual
 venv/
 .env
+.env.example
 notebooks/
 
 # Ignorar archivos compilados de Python
