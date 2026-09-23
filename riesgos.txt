@@ -1,0 +1,59 @@
+Riesgo 1: Fallo o Corrupción de la Tarjeta SD
+Este es, por lejos, el riesgo más común en una Raspberry Pi. Las tarjetas SD estándar no están diseñadas para la escritura constante de datos que una base de datos como SQLite genera. Con el tiempo, esto puede desgastar la tarjeta y corromper el sistema de archivos, haciendo que tus datos (y a veces el sistema operativo entero) se pierdan.
+
+Soluciones:
+Buena - Tarjetas SD de Alta Resistencia: Compra una tarjeta SD de tipo "High Endurance" o "Industrial". Están diseñadas específicamente para cargas de trabajo de escritura intensiva, como las cámaras de seguridad o las "dash cams", y son mucho más confiables.
+
+Mejor - Mover la Base de Datos a un Disco Externo: Conecta una pequeña unidad SSD USB o una memoria USB de buena calidad a la Pi. Luego, cambia la ruta de la base de datos en tu script para que apunte a esa unidad externa.
+
+Por qué es mejor: Esto separa el sistema operativo (en la SD) del almacenamiento de datos (en el USB). Las unidades USB/SSD son mucho más duraderas para escrituras constantes. Si la tarjeta SD se corrompe, tus datos en cola seguirán a salvo en la unidad externa.
+
+Cambio en el código (worker.py):
+
+Python
+
+# Suponiendo que la unidad USB se monta en /media/pi/DATA
+DB_PATH = Path("/media/pi/DATA/offline_cache.db")
+Riesgo 2: Fallo del Proceso o "Cuelgue" del Script
+Tu script worker.py es un proceso. ¿Qué pasa si se "cuelga" por un error inesperado o un problema de memoria? Dejará de procesar y enviar datos, aunque el resto de la Pi siga funcionando.
+
+Solución: Un Gestor de Procesos (Watchdog)
+Necesitas un "supervisor" que vigile tu script y lo reinicie automáticamente si falla. La herramienta estándar y ya incorporada en Raspberry Pi OS para esto es systemd.
+
+Cómo funciona: Creas un archivo de configuración de servicio que le dice al sistema operativo cómo iniciar tu script y qué hacer si se detiene.
+
+Ejemplo de archivo de servicio (/etc/systemd/system/yolo-worker.service):
+
+Ini, TOML
+
+[Unit]
+Description=YOLOv8 Detection Worker
+After=network.target
+
+[Service]
+ExecStart=/home/pi/tu_proyecto/venv/bin/python /home/pi/tu_proyecto/worker.py
+WorkingDirectory=/home/pi/tu_proyecto
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target
+La clave está en Restart=always. Esto le dice a systemd que si el script termina por cualquier motivo (un error, por ejemplo), debe reiniciarlo inmediatamente.
+
+Con systemd, te aseguras de que tu worker esté siempre en ejecución mientras la Pi esté encendida.
+
+Riesgo 3: Fallo de Hardware o Pérdida de Energía
+¿Qué pasa si la fuente de alimentación falla o hay un corte de luz prolongado y la Pi se apaga? Obviamente, dejará de enviar datos. La base de datos SQLite asegura que no se pierdan los datos que ya estaban en cola, pero no se generarán nuevos datos hasta que la Pi vuelva a estar en línea.
+
+Soluciones:
+Fuente de Alimentación Ininterrumpida (SAI/UPS): Para cortes de luz cortos, puedes conectar la Pi a un pequeño UPS. Existen "sombreros" (HATs) para la Pi que actúan como mini-baterías UPS.
+
+Monitoreo y Alertas (Heartbeat): No puedes prevenir una falla de hardware, pero sí puedes saber cuándo ocurre.
+
+Implementación: Modifica tu worker.py para que, además de las detecciones, envíe un mensaje muy simple de "estoy vivo" (un "heartbeat" o latido) a un segundo tema de Pub/Sub cada 5 minutos.
+
+En la nube: Creas una Cloud Function que se ejecuta cada 10 minutos. Su trabajo es verificar si ha llegado un "latido" en los últimos 10 minutos. Si no ha llegado, la función te envía una alerta (un email, un mensaje de Telegram, etc.) notificándote que la Pi está desconectada.
+
+Combinando estas estrategias, creas un sistema IoT verdaderamente robusto donde los datos están protegidos contra fallas de red, de software y de hardware.

@@ -1,0 +1,17 @@
+opencv-python==4.11.0.86      # Captura y procesamiento de imágenes
+torch==2.7.0                  # Motor de inferencia para YOLOv7 (CPU)
+fastapi==0.116.0              # API REST backend en la nube/local
+uvicorn==0.35.0               # Servidor ASGI para FastAPI
+ultralytics==8.3.138
+websockets==15.0.1
+python-dotenv==1.0.1
+google-api-core==2.25.1
+google-auth==2.40.3
+google-cloud-core==2.4.3
+google-cloud-firestore==2.21.0
+google-cloud-pubsub==2.31.1
+googleapis-common-protos==1.70.0
+grpc-google-iam-v1==0.14.2
+grpcio==1.74.0
+grpcio-status==1.74.0
+numpy==2.3.2
