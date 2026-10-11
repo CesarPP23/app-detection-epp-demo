@@ -1,0 +1,8 @@
+# Para correr los tests en la PC / CI. Sin ultralytics ni picamera2 (ningún test los importa).
+opencv-python-headless==5.0.0.93
+numpy==2.5.4
+websockets==17.2
+python-dotenv==1.2.4
+google-cloud-firestore==2.34.1
+google-cloud-storage==3.17.0
+pytest==9.1.1
