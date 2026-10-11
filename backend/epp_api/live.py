@@ -39,13 +39,13 @@ def _audit(email: str, action: str, target: str) -> None:
 async def _set_stream_requested(device_id: str, value: bool, email: str) -> None:
     from . import repo
 
-    await repo.set_stream_requested(device_id, value, email)
+    await repo.get_repo().set_stream_requested(device_id, value, email)
 
 
 async def _renew_lease(device_id: str) -> None:
     from . import repo
 
-    await repo.renew_lease(device_id)
+    await repo.get_repo().renew_lease(device_id)
 
 
 lease = StreamingLease(_set_stream_requested, _renew_lease, settings.lease_seconds / 3)
