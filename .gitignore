@@ -81,3 +81,8 @@ test-results/
 
 # Capturas de documentacion (la reescritura completa va en la Fase 8)
 !docs/**/*.png
+
+# Infra: políticas y configuración versionadas (las credenciales siguen cubiertas por *key*.json)
+!infra/policies/*.json
+!infra/**/*.sql
+!infra/firestore.rules
