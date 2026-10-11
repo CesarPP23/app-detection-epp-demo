@@ -78,3 +78,6 @@ node_modules/
 frontend/dist/
 playwright-report/
 test-results/
+
+# Capturas de documentacion (la reescritura completa va en la Fase 8)
+!docs/**/*.png
