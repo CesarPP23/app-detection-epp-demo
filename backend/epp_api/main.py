@@ -7,6 +7,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__, relay
+from .errors import install_error_handlers
+from .routers import admin as admin_router
+from .routers import auth as auth_router
+from .routers import devices as devices_router
+from .routers import events as events_router
 from .security_headers import SecurityHeadersMiddleware
 from .settings import settings
 
@@ -32,8 +37,18 @@ app = FastAPI(
 )
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1024)  # JSON; los JPEG no se comprimen
+install_error_handlers(app)
 app.include_router(relay.router)  # /ws/video/{device}
-# Fases siguientes: live, routers.auth/devices/events/admin
+try:  # live.py (WebSocket al navegador + lease) lo entrega 3-B
+    from . import live
+except ImportError:  # pragma: no cover
+    live = None
+if live is not None:
+    app.include_router(live.router)  # /api/devices/{id}/live
+app.include_router(auth_router.router, prefix="/api/auth")
+app.include_router(devices_router.router, prefix="/api/devices")
+app.include_router(events_router.router, prefix="/api/events")
+app.include_router(admin_router.router, prefix="/api/admin")
 
 
 @app.get("/healthz")
