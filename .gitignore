@@ -64,7 +64,17 @@ playwright-report/
 test-results/
 
 # Excepciones necesarias para el frontend (la reescritura completa va en la Fase 8)
-!frontend/package.json
-!frontend/tsconfig*.json
 .venv-edge/
 .venv-edge-b/
+
+# Frontend: configuración y contrato versionados; artefactos fuera
+!frontend/package.json
+!frontend/tsconfig*.json
+!frontend/openapi.json
+!frontend/.prettierrc
+!frontend/.nvmrc
+!frontend/.npmrc
+node_modules/
+frontend/dist/
+playwright-report/
+test-results/
