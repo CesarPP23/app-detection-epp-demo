@@ -1,0 +1,13 @@
+raspberrypi/
+docs/
+infra/
+gcp/
+front-end/
+**/node_modules
+**/__pycache__
+**/tests
+.git
+.venv*
+.env*
+*key*.json
+frontend/dist
