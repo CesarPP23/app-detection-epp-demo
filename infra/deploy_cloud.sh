@@ -38,7 +38,6 @@ run gcloud run deploy "$SERVICE" --source=. --region="$REGION" --project="$PROJE
   --cpu=1 --memory=512Mi --cpu-throttling --no-cpu-boost --timeout=3600 \
   --set-secrets=DEVICE_TOKEN=device-token:latest,SESSION_SECRET=session-secret:latest \
   --set-env-vars="$ENV_VARS" \
-  --remove-env-vars=UPLINK_TOKEN \
   --allow-unauthenticated \
   ${BUILD_SA_ARGS[@]+"${BUILD_SA_ARGS[@]}"}
 
