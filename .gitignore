@@ -62,3 +62,7 @@ node_modules/
 frontend/dist/
 playwright-report/
 test-results/
+
+# Excepciones necesarias para el frontend (la reescritura completa va en la Fase 8)
+!frontend/package.json
+!frontend/tsconfig*.json
