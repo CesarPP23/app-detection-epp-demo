@@ -68,7 +68,7 @@ export default function PrivacyPage() {
           </section>
         ))}
         <p className="mt-8">
-          <Link to="/login" className="text-accent underline">
+          <Link to="/login" className="text-accent-text underline">
             Volver al inicio de sesión
           </Link>
         </p>

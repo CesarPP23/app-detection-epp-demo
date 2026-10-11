@@ -29,7 +29,7 @@ interface Props {
 
 const TONE: Record<Delta["tone"], string> = {
   good: "text-delta-good",
-  bad: "text-critical",
+  bad: "text-critical-text",
   neutral: "text-ink-2",
 };
 

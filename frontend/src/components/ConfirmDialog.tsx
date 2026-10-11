@@ -41,7 +41,7 @@ export function ConfirmDialog({
               disabled={busy}
               onClick={onConfirm}
               className="min-h-11 rounded-control px-4 text-sm font-medium text-white disabled:opacity-60"
-              style={{ background: destructive ? "var(--status-critical)" : "var(--accent)" }}
+              style={{ background: destructive ? "var(--status-critical)" : "var(--accent-solid)" }}
             >
               {busy ? "Procesando…" : confirmLabel}
             </button>

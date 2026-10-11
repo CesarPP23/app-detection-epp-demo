@@ -88,12 +88,12 @@ function AddUser() {
         type="submit"
         disabled={create.isPending}
         className="min-h-11 rounded-control px-4 text-sm font-medium text-white disabled:opacity-60"
-        style={{ background: "var(--accent)" }}
+        style={{ background: "var(--accent-solid)" }}
       >
         Agregar usuario
       </button>
       {error && (
-        <p id="error-alta" role="alert" className="text-sm text-critical sm:basis-full">
+        <p id="error-alta" role="alert" className="text-sm text-critical-text sm:basis-full">
           {error}
         </p>
       )}
@@ -151,7 +151,7 @@ export function UsersTab() {
     );
   else
     list = (
-      <div className="overflow-x-auto rounded-card border border-line">
+      <div className="relative overflow-x-auto rounded-card border border-line">
         <table className="w-full text-sm">
           <caption className="sr-only">Usuarios con acceso al panel</caption>
           <thead className="bg-surface-2 text-left text-ink-2">

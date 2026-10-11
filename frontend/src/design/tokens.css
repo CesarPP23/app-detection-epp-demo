@@ -13,6 +13,11 @@
   --grid: #e1e0d9;
   --axis: #c3c2b7;
   --accent: #2a78d6;
+  /* Variantes AA para texto (3.12): --text-muted y --accent no llegan a 4.5:1 como texto. */
+  --text-muted-aa: #6b6a65;
+  --accent-text: #1f6bc4;
+  --accent-solid: #1f6bc4;
+  --critical-text: #c23030;
   --status-good: #0ca30c;
   --status-warning: #fab219;
   --status-serious: #ec835a;
@@ -38,6 +43,10 @@
   --grid: #2c2c2a;
   --axis: #383835;
   --accent: #3987e5;
+  --text-muted-aa: #a3a19b;
+  --accent-text: #6aa5f0;
+  --accent-solid: #2570cc;
+  --critical-text: #f27878;
   --status-good: #0ca30c;
   --status-warning: #fab219;
   --status-serious: #ec835a;
@@ -59,14 +68,17 @@
   --color-line: var(--border);
   --color-ink: var(--text-primary);
   --color-ink-2: var(--text-secondary);
-  --color-ink-3: var(--text-muted);
+  --color-ink-3: var(--text-muted-aa);
   --color-grid: var(--grid);
   --color-axis: var(--axis);
   --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-solid: var(--accent-solid);
   --color-good: var(--status-good);
   --color-warning: var(--status-warning);
   --color-serious: var(--status-serious);
   --color-critical: var(--status-critical);
+  --color-critical-text: var(--critical-text);
   --color-delta-good: var(--delta-good-text);
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --radius-control: 6px;

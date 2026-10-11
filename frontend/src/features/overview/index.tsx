@@ -45,7 +45,7 @@ function DeviceCard({ device }: { device: DeviceStatus }) {
       </span>
       <span className="text-sm text-ink">{device.name}</span>
       <span className="text-sm text-ink-2">· {parts.join(" · ")}</span>
-      <Link to="/live" className="ml-auto min-h-11 content-center text-sm font-medium text-accent">
+      <Link to="/live" className="ml-auto min-h-11 content-center text-sm font-medium text-accent-text">
         Ver en vivo →
       </Link>
     </section>
@@ -143,7 +143,7 @@ export default function OverviewPage() {
         title="Sin eventos en este periodo"
         message="El dispositivo no confirmó detecciones en este periodo. Prueba con un periodo más largo o revisa que esté detectando."
         action={
-          <Link to="/device" className="text-sm font-medium text-accent">
+          <Link to="/device" className="text-sm font-medium text-accent-text">
             Ver el estado del dispositivo
           </Link>
         }
@@ -195,7 +195,7 @@ export default function OverviewPage() {
             delta={pointsDelta(k?.capture_coverage.value, k?.capture_coverage.previous, range)}
             hint={
               uncovered > 0 ? (
-                <Link to={`/events?captura=falta&rango=${range}`} className="text-accent">
+                <Link to={`/events?captura=falta&rango=${range}`} className="text-accent-text">
                   {formatInt(uncovered)} sin captura → ver
                 </Link>
               ) : undefined
@@ -246,7 +246,7 @@ export default function OverviewPage() {
             <h2 id="ultimos" className="text-xl font-semibold text-ink">
               Últimos eventos
             </h2>
-            <Link to="/events" className="min-h-11 content-center text-sm font-medium text-accent">
+            <Link to="/events" className="min-h-11 content-center text-sm font-medium text-accent-text">
               Ver todos →
             </Link>
           </div>

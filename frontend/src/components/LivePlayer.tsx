@@ -188,7 +188,7 @@ export function LivePlayer({ deviceId, actions, onMetrics, className = "" }: Pro
         >
           <Radio
             aria-hidden
-            className={`size-4 text-accent ${view === "live" ? "live-dot" : ""}`}
+            className={`size-4 text-accent-text ${view === "live" ? "live-dot" : ""}`}
           />
           {view === "live" ? "EN VIVO" : text.title}
         </span>

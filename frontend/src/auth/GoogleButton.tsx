@@ -69,7 +69,7 @@ export function GoogleButton({
     <div>
       <div ref={host} className="flex min-h-10 justify-center" />
       {error && (
-        <p role="alert" className="mt-3 text-sm text-critical">
+        <p role="alert" className="mt-3 text-sm text-critical-text">
           {error}
         </p>
       )}

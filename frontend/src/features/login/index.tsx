@@ -75,7 +75,7 @@ export default function LoginPage() {
           {loading || config.isPending ? (
             <Skeleton className="mx-auto h-10 w-[280px]" label="Preparando el inicio de sesión" />
           ) : config.isError || !config.data?.client_id ? (
-            <p role="alert" className="text-sm text-critical">
+            <p role="alert" className="text-sm text-critical-text">
               El inicio de sesión no está disponible por ahora. Intenta de nuevo más tarde.
             </p>
           ) : (
@@ -84,12 +84,12 @@ export default function LoginPage() {
         </div>
 
         {denied && (
-          <p role="alert" className="mt-4 text-sm text-critical">
+          <p role="alert" className="mt-4 text-sm text-critical-text">
             Tu cuenta ({denied}) no tiene acceso. Pide acceso al administrador.
           </p>
         )}
         {failure && (
-          <p role="alert" className="mt-4 text-sm text-critical">
+          <p role="alert" className="mt-4 text-sm text-critical-text">
             {failure}
           </p>
         )}
@@ -97,7 +97,7 @@ export default function LoginPage() {
         <p className="mt-8 text-xs text-ink-3">
           Al continuar aceptas que el sistema registre tu actividad de acceso. Las imágenes de
           trabajadores se tratan según el{" "}
-          <Link to="/privacidad" className="text-accent underline">
+          <Link to="/privacidad" className="text-accent-text underline">
             aviso de privacidad
           </Link>
           .

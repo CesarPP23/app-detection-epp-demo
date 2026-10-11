@@ -36,7 +36,7 @@ export function FilterBar({ filters, onChange, extraClasses, onSearchId, onReset
   };
   const seg = (on: boolean) =>
     `inline-flex min-h-11 items-center gap-1.5 px-3 text-sm md:min-h-9 ${
-      on ? "bg-accent font-medium text-white" : "bg-surface-2 text-ink hover:bg-surface-1"
+      on ? "bg-accent-solid font-medium text-white" : "bg-surface-2 text-ink hover:bg-surface-1"
     }`;
 
   return (

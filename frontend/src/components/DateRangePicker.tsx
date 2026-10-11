@@ -38,7 +38,7 @@ export function DateRangePicker({
               onClick={() => onChange({ ...value, preset: p.id })}
               className={`min-h-11 rounded-control border px-3 text-sm md:min-h-9 ${
                 on
-                  ? "border-accent bg-accent font-medium text-white"
+                  ? "border-accent-solid bg-accent-solid font-medium text-white"
                   : "border-line bg-surface-2 text-ink hover:bg-surface-1"
               }`}
             >

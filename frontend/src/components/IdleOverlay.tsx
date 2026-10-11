@@ -31,7 +31,7 @@ export function IdleOverlay() {
           ref={btn}
           type="button"
           onClick={resume}
-          className="mt-5 min-h-11 rounded-control bg-accent px-5 text-sm font-medium text-white"
+          className="mt-5 min-h-11 rounded-control bg-accent-solid px-5 text-sm font-medium text-white"
         >
           Reanudar
         </button>

@@ -180,7 +180,7 @@ export default function LivePage() {
         type="button"
         disabled={setState.isPending}
         onClick={() => change("running")}
-        className="inline-flex min-h-11 items-center gap-1.5 rounded-control bg-accent px-3 text-sm font-medium text-white disabled:opacity-60 md:min-h-9"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-control bg-accent-solid px-3 text-sm font-medium text-white disabled:opacity-60 md:min-h-9"
       >
         <PlayCircle aria-hidden className="size-4" /> Reanudar detección
       </button>
