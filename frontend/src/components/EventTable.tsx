@@ -51,7 +51,7 @@ function SortHeader({
 export function EventTable({ events, sort, dir, density, onSort, hrefFor }: Props) {
   const pad = density === "compacta" ? "py-1" : "py-3";
   return (
-    <div className="overflow-x-auto rounded-card border border-line bg-surface-1">
+    <div className="relative overflow-x-auto rounded-card border border-line bg-surface-1">
       <table className="tabular w-full min-w-[760px] text-sm">
         <caption className="sr-only">Eventos registrados</caption>
         <thead className="bg-surface-2 text-ink-2">

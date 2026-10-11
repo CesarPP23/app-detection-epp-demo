@@ -32,8 +32,10 @@ export function formatDeltaRelative(value: Maybe, previous: Maybe): string {
 /** Variación en puntos porcentuales ("−2 pts") para magnitudes que ya son fracciones 0-1. */
 export function formatDeltaPoints(value: Maybe, previous: Maybe): string {
   if (value == null || previous == null) return "—";
-  const d = Math.round((value - previous) * 100);
-  return `${d >= 0 ? "+" : "−"}${Math.abs(d)} pts`;
+  const raw = (value - previous) * 100;
+  const d = Math.round(raw * 10) / 10; // un decimal: −0,2 pts no se redondea a "+0"
+  const text = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 1 }).format(Math.abs(d));
+  return `${d > 0 ? "+" : d < 0 ? "−" : ""}${text} pts`;
 }
 
 /** 9 → "9 s", 75 → "1 min 15 s", 22320 → "6 h 12 min". */

@@ -99,6 +99,8 @@ export function CaptureViewer({
             detections.map((d, i) => {
               const [x1, y1] = d.bbox_xyxy_norm;
               if (x1 === undefined || y1 === undefined) return null;
+              // Cajas pegadas al borde superior: la etiqueta va dentro, no recortada fuera de la imagen.
+              const inside = y1 < 0.08;
               return (
                 <span
                   key={i}
@@ -106,7 +108,7 @@ export function CaptureViewer({
                   style={{
                     left: `${x1 * 100}%`,
                     top: `${y1 * 100}%`,
-                    transform: "translateY(-100%)",
+                    transform: inside ? "none" : "translateY(-100%)",
                     background: "color-mix(in srgb, var(--surface-1) 85%, transparent)",
                   }}
                 >

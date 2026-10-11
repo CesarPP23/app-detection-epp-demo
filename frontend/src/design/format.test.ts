@@ -32,6 +32,9 @@ describe("format (es-PE, hora de Lima)", () => {
     expect(formatDeltaRelative(90, 100)).toMatch(/^−10\s?%$/);
     expect(formatDeltaPoints(0.82, 0.84)).toBe("−2 pts");
     expect(formatDeltaPoints(0.9, 0.84)).toBe("+6 pts");
+    // Un cambio pequeño no se redondea a "+0" con el signo equivocado.
+    expect(formatDeltaPoints(0.998, 1)).toBe("−0.2 pts");
+    expect(formatDeltaPoints(0.5, 0.5)).toBe("0 pts");
   });
 
   it("formatea números y porcentajes con Intl", () => {

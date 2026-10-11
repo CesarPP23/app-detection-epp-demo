@@ -57,7 +57,7 @@ export function AuditTab() {
   else
     list = (
       <>
-        <div className="overflow-x-auto rounded-card border border-line">
+        <div className="relative overflow-x-auto rounded-card border border-line">
           <table className="tabular w-full text-sm">
             <caption className="sr-only">Registro de auditoría</caption>
             <thead className="bg-surface-2 text-left text-ink-2">

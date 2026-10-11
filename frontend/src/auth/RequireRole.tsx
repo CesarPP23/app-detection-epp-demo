@@ -9,7 +9,13 @@ import { hasRole, useAuth } from "./AuthProvider";
 export function RequireRole({ role = "viewer", children }: { role?: Role; children: ReactNode }) {
   const { user, loading } = useAuth();
   const loc = useLocation();
-  if (loading) return <Skeleton className="m-6 h-40" label="Verificando sesión" />;
+  // padding (no margin): el margen colapsa con <body> y lo desplazaría 24 px (CLS).
+  if (loading)
+    return (
+      <div className="p-6">
+        <Skeleton className="h-40" label="Verificando sesión" />
+      </div>
+    );
   if (!user) {
     const next = encodeURIComponent(loc.pathname + loc.search);
     return <Navigate to={`/login?next=${next}`} replace />;
