@@ -49,6 +49,18 @@ solo permite `script-src 'self'`.
 | `--status-serious` | `#ec835a` | `#ec835a` | Cámara con problemas / outbox creciendo |
 | `--status-critical` | `#d03b3b` | `#d03b3b` | Sin conexión / error |
 | `--delta-good-text` | `#006300` | `#0ca30c` | texto de variación positiva |
+| `--text-muted-aa` | `#6b6a65` | `#a3a19b` | texto atenuado (metadatos, ayudas): `text-ink-3` |
+| `--accent-text` | `#1f6bc4` | `#6aa5f0` | enlaces y texto en color de acento: `text-accent-text` |
+| `--accent-solid` | `#1f6bc4` | `#2570cc` | fondo de botones y chips activos con texto blanco: `bg-accent-solid` |
+| `--critical-text` | `#c23030` | `#f27878` | mensajes y variaciones negativas en texto: `text-critical-text` |
+
+**Variantes AA para texto (hallazgo del cierre de la Fase 3).** Los valores de la tabla de 3.8 se
+conservan para lo que no es texto (barras, íconos, bordes, foco, series), pero como *texto* no llegan
+a 4,5:1: `--text-muted` `#898781` da 3,4:1 sobre `--page`; `--accent` `#2a78d6` da 4,3:1 sobre
+`--surface-1` y 4,42:1 con texto blanco encima; `--status-critical` `#d03b3b` da 3,6:1 sobre
+`--surface-1` oscuro. axe lo detectó en el Resumen, el login y Administración. Se añadieron las
+cuatro variantes de arriba, todas >= 4,5:1 sobre `--page`, `--surface-1` y `--surface-2` en su tema.
+Regla: **texto -> variante `-text`/`-aa`; relleno y trazo -> token base.**
 
 - **Tipografía:** `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` (sin fuentes web).
   Escala 12 / 14 / 16 / 20 / 24 / 32 / 48 px; pesos 400/500/600. `tabular-nums` (`.tabular`) solo en
@@ -166,8 +178,97 @@ CLS < 0,05 (imágenes con `aspect-ratio` fijo).
 - Español neutro (es-PE), segunda persona, sin jerga técnica ("Sin señal del dispositivo", no
   "WebSocket closed 1006"). Números con `Intl.NumberFormat("es-PE")`; fechas en `America/Lima`.
 
-## 6. Pendiente de completar en la fase de pantallas
+## 6. Fichas de pantalla (3.10)
 
-- Fichas de las 7 pantallas con capturas en tema claro y oscuro (3.10).
-- Revisión heurística de Nielsen y resultados de la prueba de usabilidad (5 participantes, SUS ≥ 75) (3.13).
-- Resultados de Lighthouse (móvil) y de axe por pantalla.
+Capturas generadas por `frontend/e2e/visual.spec.ts` con datos de ejemplo (la API se intercepta en el
+navegador, sin backend real); se regeneran con `pnpm test:e2e`. Escritorio (1440 px) en ambos temas y
+móvil (360 px) en claro; 768 px se verifica sin guardarse.
+
+| Pantalla (ruta) | Rol mínimo | Claro 1440 | Oscuro 1440 | Móvil 360 |
+|---|---|---|---|---|
+| Inicio de sesión (`/login`) | — | ![](img/login-1440-claro.png) | ![](img/login-1440-oscuro.png) | ![](img/login-360-claro.png) |
+| Resumen (`/`) | viewer | ![](img/resumen-1440-claro.png) | ![](img/resumen-1440-oscuro.png) | ![](img/resumen-360-claro.png) |
+| En vivo (`/live`) | viewer (pausar: operator) | ![](img/en-vivo-1440-claro.png) | ![](img/en-vivo-1440-oscuro.png) | ![](img/en-vivo-360-claro.png) |
+| Eventos (`/events`) | viewer | ![](img/eventos-1440-claro.png) | ![](img/eventos-1440-oscuro.png) | ![](img/eventos-360-claro.png) |
+| Detalle de evento (`/events/:id`) | viewer | ![](img/detalle-evento-1440-claro.png) | ![](img/detalle-evento-1440-oscuro.png) | ![](img/detalle-evento-360-claro.png) |
+| Dispositivo (`/device`) | viewer (pausar: operator) | ![](img/dispositivo-1440-claro.png) | ![](img/dispositivo-1440-oscuro.png) | ![](img/dispositivo-360-claro.png) |
+| Administración (`/admin`) | admin | ![](img/administracion-1440-claro.png) | ![](img/administracion-1440-oscuro.png) | ![](img/administracion-360-claro.png) |
+
+Cada pantalla define estados de carga (esqueletos con la forma final), vacío, error con "Reintentar" y
+sin permiso; están cubiertos por las pruebas de Vitest de cada pantalla.
+
+## 7. Verificación automatizada
+
+Fecha: 2026-10-10 · Chromium (Playwright 1.64) contra `vite preview` con la API interceptada.
+
+| Verificación | Cómo | Resultado |
+|---|---|---|
+| Flujos e2e (13) | `e2e/flujos.spec.ts`: login en ventana limpia, cuenta no autorizada, login con `?next=`, recorrido de las 7 pantallas con `viewer` y `admin`, `viewer` sin botón de pausa, evento → detalle con cajas, `/events/<id>` directo, filtros en la URL, pestaña oculta (con control positivo), 15 min de inactividad (reloj simulado), salida de En vivo, barra lateral | ✓ 13/13 |
+| Accesibilidad (14) | `e2e/accesibilidad.spec.ts`: axe (`wcag2a/aa`, `wcag21a/aa`, `wcag22aa`) en las 7 pantallas × 2 temas | ✓ 0 violaciones serias o críticas |
+| Visual (42) | `e2e/visual.spec.ts`: 7 pantallas × 3 anchos (360/768/1440) × 2 temas; `scrollWidth <= clientWidth` y ningún elemento fuera del viewport salvo dentro de contenedores con scroll propio | ✓ 42/42 |
+| Presupuesto de JS | `pnpm check:budget` | ✓ 141,1 KB gzip (límite 180) |
+| Lighthouse móvil sobre `/` | Lighthouse 12.8.2, preset móvil (Slow 4G y CPU ×4 simulados), 3 corridas | Performance 90–91 · Accesibilidad 98 · Mejores prácticas 100 · CLS 0,00 · TBT 20 ms · LCP 3,1–3,2 s · FCP 2,4 s |
+
+Notas honestas sobre Lighthouse:
+
+- Se midió con la API interceptada y un servidor local, no contra Cloud Run: **el LCP real depende de
+  la red y del arranque en frío de la instancia** y debe repetirse en la Fase 10 con la URL de
+  producción.
+- El preset móvil de Lighthouse (Slow 4G) es más severo que el "4G" de la meta de LCP < 2,5 s; con
+  LCP = 3,1 s el rendimiento queda justo en 90, sin margen. El elemento LCP es el valor del primer KPI
+  (depende de la respuesta de `/api/devices/.../summary`).
+- La primera medición dio CLS 0,058 (> 0,05): el esqueleto "Verificando sesión" usaba `m-6` y su margen
+  colapsaba con `<body>`, que se desplazaba 24 px al aparecer y al desaparecer. Se cambió por `p-6`
+  (en `RequireRole`) y el CLS bajó a 0,00.
+
+### Defectos hallados y corregidos durante la verificación
+
+1. **Contraste insuficiente como texto** en tokens de la tabla 3.8 (ver sección 2): se añadieron
+   `--text-muted-aa`, `--accent-text`, `--accent-solid` y `--critical-text`.
+2. **Desborde horizontal en Administración a 360 px** (428 px de ancho): el `span.sr-only` de la columna
+   "Acciones" es `position:absolute` y, sin ancestro posicionado, ensanchaba la página aunque la tabla
+   tuviera su propio scroll. Los contenedores `overflow-x-auto` de tablas ahora son `relative`.
+3. **Barra lateral sin estilos**: `Tooltip.Trigger asChild` (Radix `Slot`) no preserva un `className`
+   que sea función (el de `NavLink`), así que el ítem activo no se resaltaba y el ícono quedaba sobre
+   el texto. `SidebarItem` calcula la clase como cadena con `useMatch` y marca `aria-current="page"`.
+4. **Variación de puntos mal redondeada**: la cobertura de capturas pasó de 100 % a 99,8 % y se
+   mostraba "+0 pts" con flecha roja; ahora sale "−0.2 pts" (un decimal; el signo sale de la
+   diferencia real, no del redondeo).
+5. **Etiqueta de caja recortada**: en capturas con una detección pegada al borde superior, la
+   etiqueta (clase y confianza) quedaba fuera de la imagen; ahora se coloca dentro de la caja.
+
+## 8. Prueba de usabilidad y revisión heurística (3.13) — PENDIENTE (requiere personas)
+
+> Esta sección es una plantilla. **No contiene resultados**: se completa cuando se hagan las
+> sesiones con usuarios reales (no se simulan).
+
+**Revisión heurística de Nielsen** (hacer antes de la prueba; corregir los hallazgos y registrarlos):
+
+| # | Heurística | Hallazgo | Severidad (0–4) | Estado |
+|---|---|---|---|---|
+| 1 | Visibilidad del estado del sistema | | | |
+| 2 | Coincidencia con el mundo real | | | |
+| 3 | Control y libertad del usuario | | | |
+| 4 | Consistencia y estándares | | | |
+| 5 | Prevención de errores | | | |
+| 6 | Reconocer antes que recordar | | | |
+| 7 | Flexibilidad y eficiencia | | | |
+| 8 | Diseño estético y minimalista | | | |
+| 9 | Ayuda a reconocer y recuperarse de errores | | | |
+| 10 | Ayuda y documentación | | | |
+
+**Prueba de usabilidad**: 5 participantes, 5 tareas cronometradas, sin ayuda. Metas: ≥ 80 % de éxito
+y tarea 1 en < 5 s.
+
+| Tarea | P1 | P2 | P3 | P4 | P5 | Éxito | Tiempo mediano |
+|---|---|---|---|---|---|---|---|
+| 1. ¿El dispositivo está funcionando ahora? | | | | | | | |
+| 2. ¿Cuántos eventos de guantes hubo ayer? | | | | | | | |
+| 3. Muéstrame la captura del último evento de mascarilla | | | | | | | |
+| 4. Abre el video en vivo | | | | | | | |
+| 5. Comparte el enlace de un evento | | | | | | | |
+
+**Cuestionario SUS** (meta ≥ 75): puntuación por participante P1 __ · P2 __ · P3 __ · P4 __ · P5 __ ·
+promedio __.
+
+**Observaciones y cambios derivados**: (pendiente).
