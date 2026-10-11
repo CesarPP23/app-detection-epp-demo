@@ -67,3 +67,4 @@ test-results/
 !frontend/package.json
 !frontend/tsconfig*.json
 .venv-edge/
+.venv-edge-b/
