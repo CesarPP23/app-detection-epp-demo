@@ -29,6 +29,10 @@ class GoogleLogin(BaseModel):
     credential: str = Field(min_length=10, max_length=4096)
 
 
+class AuthConfig(BaseModel):
+    client_id: str | None = None
+
+
 class Me(BaseModel):
     email: str
     name: str | None = None

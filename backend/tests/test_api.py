@@ -15,6 +15,12 @@ def err_code(resp):
 # --- autenticación ----------------------------------------------------------------------------
 
 
+def test_auth_config_es_publica_y_devuelve_el_client_id(env):
+    r = env.client.get("/api/auth/config")
+    assert r.status_code == 200
+    assert r.json() == {"client_id": "client-id.apps.googleusercontent.com"}
+
+
 def test_login_feliz_emite_cookie_y_me(env, monkeypatch):
     monkeypatch.setattr(env.mods["auth"], "verify_google_token", lambda c: GOOD_INFO)
     r = env.client.post("/api/auth/google", json={"credential": "x" * 20}, headers=HDR)

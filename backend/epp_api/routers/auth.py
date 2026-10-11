@@ -4,13 +4,19 @@ from .. import auth
 from ..audit import Audit, get_audit
 from ..errors import ApiError
 from ..repo import Repo, get_repo
-from ..schemas import GoogleLogin, Me
+from ..schemas import AuthConfig, GoogleLogin, Me
 
 router = APIRouter(tags=["auth"])
 
 
 def _me(user: auth.SessionUser) -> Me:
     return Me(email=user.email, name=user.name, picture=user.picture, role=user.role)  # type: ignore[arg-type]
+
+
+@router.get("/config", response_model=AuthConfig)
+async def auth_config():
+    """Público: el client ID de Google no es un secreto y la SPA lo necesita antes del login."""
+    return AuthConfig(client_id=auth.settings.google_oauth_client_id or None)
 
 
 @router.post("/google", response_model=Me)

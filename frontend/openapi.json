@@ -79,6 +79,23 @@
         "title": "AuditPage",
         "type": "object"
       },
+      "AuthConfig": {
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          }
+        },
+        "title": "AuthConfig",
+        "type": "object"
+      },
       "CaptureDetail": {
         "properties": {
           "bytes": {
@@ -1404,6 +1421,28 @@
         "summary": "Patch User",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/auth/config": {
+      "get": {
+        "description": "Público: el client ID de Google no es un secreto y la SPA lo necesita antes del login.",
+        "operationId": "auth_config_api_auth_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Auth Config",
+        "tags": [
+          "auth"
         ]
       }
     },

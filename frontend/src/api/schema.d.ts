@@ -57,6 +57,26 @@ export interface paths {
         patch: operations["patch_user_api_admin_users__email__patch"];
         trace?: never;
     };
+    "/api/auth/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Auth Config
+         * @description Público: el client ID de Google no es un secreto y la SPA lo necesita antes del login.
+         */
+        get: operations["auth_config_api_auth_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/google": {
         parameters: {
             query?: never;
@@ -258,6 +278,11 @@ export interface components {
             items: components["schemas"]["AuditEntry"][];
             /** Next Cursor */
             next_cursor?: string | null;
+        };
+        /** AuthConfig */
+        AuthConfig: {
+            /** Client Id */
+            client_id?: string | null;
         };
         /** CaptureDetail */
         CaptureDetail: {
@@ -774,6 +799,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auth_config_api_auth_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthConfig"];
                 };
             };
         };
