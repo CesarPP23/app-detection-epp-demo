@@ -60,6 +60,12 @@ class LatencyWindow:
         return self.percentile(95)
 
 
+def load_yolo(model_path: Path):
+    from ultralytics import YOLO  # import tardío: los tests no lo necesitan
+
+    return YOLO(str(model_path), task="detect")
+
+
 class InferenceWorker(threading.Thread):
     def __init__(
         self,
@@ -69,10 +75,12 @@ class InferenceWorker(threading.Thread):
         on_result: Callable[[Inference, Frame], None],
         stop: threading.Event,
         log: logging.Logger,
+        model_factory: Callable[[Path], object] = load_yolo,
     ) -> None:
         super().__init__(name="inference", daemon=True)
         self.s, self.frames, self.results = settings, frames, results
         self.on_result, self.stop, self.log = on_result, stop, log
+        self._model_factory = model_factory  # inyectable en tests (sin ultralytics)
         self.ready = threading.Event()
         self.latency = LatencyWindow()
         self.model_version = "unknown"
@@ -87,10 +95,8 @@ class InferenceWorker(threading.Thread):
         return (len(self._fps_times) - 1) / span if span > 0 else 0.0
 
     def run(self) -> None:
-        from ultralytics import YOLO  # import tardío: los tests no lo necesitan
-
         self.model_version = compute_model_version(self.s.model_path)
-        model = YOLO(str(self.s.model_path), task="detect")
+        model = self._model_factory(self.s.model_path)
         model.predict(
             np.zeros((self.s.model_imgsz, self.s.model_imgsz, 3), np.uint8),
             imgsz=self.s.model_imgsz,

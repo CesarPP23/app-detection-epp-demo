@@ -7,11 +7,11 @@ import time
 
 from . import __version__
 from .aggregator import DetectionAggregator
-from .capture import CaptureThread
+from .capture import CaptureThread, build_source
 from .captures import build_capture
 from .config import Settings
 from .control import DeviceControl, HealthReporter
-from .inference import InferenceWorker
+from .inference import InferenceWorker, load_yolo
 from .logging_setup import setup_logging
 from .models import ClosedEvent, Frame, Inference
 from .outbox import Outbox, Uploader
@@ -27,8 +27,16 @@ class Pipeline:
     al pausar o apagar; al detenerse cierra las sesiones abiertas y las manda al outbox (D1)."""
 
     def __init__(
-        self, s: Settings, control: DeviceControl, health: HealthReporter, outbox: Outbox, log: logging.Logger
-    ) -> None:
+        self,
+        s: Settings,
+        control: DeviceControl,
+        health: HealthReporter,
+        outbox: Outbox,
+        log: logging.Logger,
+        source_factory=build_source,
+        model_factory=load_yolo,
+        stream_connect=None,
+    ) -> None:  # las tres fábricas son inyectables para probar el pipeline sin hardware ni ultralytics
         self.s, self.control, self.health, self.outbox, self.log = s, control, health, outbox, log
         self.stop_event = threading.Event()
         self.frames: LatestSlot[Frame] = LatestSlot()
@@ -44,9 +52,13 @@ class Pipeline:
             logger=log,
         )
         self._agg_lock = threading.Lock()  # on_result (hilo de inferencia) vs tick/stop
-        self.capture = CaptureThread(s, self.frames, self.stop_event, log)
-        self.inference = InferenceWorker(s, self.frames, self.results, self._on_result, self.stop_event, log)
-        self.streamer = StreamWorker(s, control, health, self.frames, self.results, self.stop_event, log)
+        self.capture = CaptureThread(s, self.frames, self.stop_event, log, source_factory)
+        self.inference = InferenceWorker(
+            s, self.frames, self.results, self._on_result, self.stop_event, log, model_factory
+        )
+        self.streamer = StreamWorker(
+            s, control, health, self.frames, self.results, self.stop_event, log, connect=stream_connect
+        )
         self._started = time.monotonic()
         self._camera_down_since: float | None = None
         self._last_health = 0.0
