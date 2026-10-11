@@ -1,7 +1,15 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { apiError, http, json, me, renderScreen, server, installMockServer } from "@/test/c2a-utils";
+import {
+  apiError,
+  http,
+  json,
+  me,
+  renderScreen,
+  server,
+  installMockServer,
+} from "@/test/c2a-utils";
 import LoginPage, { emailFromCredential, safeNext } from ".";
 
 vi.mock("@/auth/GoogleButton", () => ({
