@@ -134,9 +134,18 @@ fi
 log "Paso 8/12: unit de systemd"
 install -o root -g root -m 0644 "$UNIT_SRC" "/etc/systemd/system/${SERVICE_NAME}.service"
 systemctl daemon-reload
-systemctl enable --now "$SERVICE_NAME"
-log "Servicio '$SERVICE_NAME' habilitado. Si edge.env/la key/el modelo aun faltan, el servicio" \
-  "reintentara solo (Restart=always) hasta que completes esos pasos."
+systemctl enable "$SERVICE_NAME"
+# El primer arranque puede fallar a proposito si edge.env/la key/el modelo aun no estan listos
+# (Settings.from_env() es fail-closed). No debe abortar la instalacion: el servicio ya quedo
+# habilitado con Restart=always y reintentara solo en cuanto completes esos pasos.
+systemctl restart "$SERVICE_NAME" || true
+if systemctl is-active --quiet "$SERVICE_NAME"; then
+  log "Servicio '$SERVICE_NAME' activo."
+else
+  warn "'$SERVICE_NAME' no arranco en este primer intento (normal si edge.env/la key/el modelo" \
+    "aun no estan listos). Quedo habilitado y reintentando solo. Verifica con:" \
+    "systemctl status $SERVICE_NAME ; journalctl -u $SERVICE_NAME -n 30 --no-pager"
+fi
 
 # --- Paso 9: journald con tope de 200M ----------------------------------------------------------
 log "Paso 9/12: journald (SystemMaxUse=200M)"
