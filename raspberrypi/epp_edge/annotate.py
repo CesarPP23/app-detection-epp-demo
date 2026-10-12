@@ -1,4 +1,5 @@
 """Dibujo de cajas sobre frames. Todas las funciones trabajan sobre una copia."""
+
 import cv2
 import numpy as np
 
@@ -42,7 +43,13 @@ def draw_detections(
         y_top = max(0, p1[1] - th - bl - 2)
         cv2.rectangle(out, (p1[0], y_top), (p1[0] + tw + 4, y_top + th + bl + 2), color, -1)
         cv2.putText(
-            out, label, (p1[0] + 2, y_top + th + 1), cv2.FONT_HERSHEY_SIMPLEX, scale, (255, 255, 255), 1,
+            out,
+            label,
+            (p1[0] + 2, y_top + th + 1),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            scale,
+            (255, 255, 255),
+            1,
             cv2.LINE_AA,
         )
     return out

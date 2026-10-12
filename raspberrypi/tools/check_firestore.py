@@ -6,6 +6,7 @@ Uso:
 
 Solo lectura. Muestra `device_control` y `device_health` de la base de control.
 """
+
 import argparse
 import os
 import sys

@@ -9,9 +9,10 @@ Regla de negocio (ver docs/DATA_MODEL.md):
 - Los tiempos usan el reloj monotónico de los frames reales procesados (independiente del FPS).
 - Una sesión por CLASE, no por persona (limitación D9, documentada).
 """
+
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from . import __version__
@@ -21,7 +22,7 @@ from .models import ClosedEvent, Detection, Frame, Inference
 
 def iso_z(dt: datetime) -> str:
     """ISO-8601 UTC con milisegundos y sufijo Z (formato del contrato v2)."""
-    dt = dt.astimezone(timezone.utc)
+    dt = dt.astimezone(UTC)
     return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{dt.microsecond // 1000:03d}Z"
 
 
@@ -188,5 +189,6 @@ class DetectionAggregator:
             self._last_noise_log_at = self.noise_discarded_count
             self._say(
                 "info",
-                f"Resumen anti-ruido: {self.noise_discarded_count} detecciones descartadas por corta duración.",
+                f"Resumen anti-ruido: {self.noise_discarded_count} detecciones descartadas "
+                "por corta duración.",
             )

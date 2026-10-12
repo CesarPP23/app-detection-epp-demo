@@ -4,11 +4,9 @@ import json
 import cv2
 import numpy as np
 import pytest
-
+from _fakes import make_closed_event, make_settings
 from epp_edge import captures
 from epp_edge.captures import build_capture
-
-from _fakes import make_closed_event, make_settings
 
 
 def test_captura_ok_escribe_tres_archivos_sin_tmp(tmp_path):

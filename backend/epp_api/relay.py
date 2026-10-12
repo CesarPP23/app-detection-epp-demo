@@ -82,7 +82,7 @@ async def ws_video(websocket: WebSocket, device_id: str):
             data = await asyncio.wait_for(websocket.receive_bytes(), timeout=settings.publisher_idle_seconds)
             if valid_frame(data):
                 await ch.publish(data)
-    except (WebSocketDisconnect, asyncio.TimeoutError):
+    except (TimeoutError, WebSocketDisconnect):
         pass
     finally:
         await ch.close(my_id)

@@ -1,13 +1,13 @@
 """Dobles de prueba para outbox, uploader, control y capturas (sin GCP, sin ultralytics)."""
+
 import itertools
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import numpy as np
-from google.api_core.exceptions import Conflict, PreconditionFailed
-
 from epp_edge.models import ClosedEvent, Detection, Frame
+from google.api_core.exceptions import Conflict, PreconditionFailed
 
 
 def make_settings(tmp_path, **over):
@@ -83,7 +83,7 @@ def make_closed_event(with_frame=True, clase="latex_gloves", **over):
     frame = None
     if with_frame:
         img = np.random.default_rng(0).integers(0, 255, (360, 640, 3), dtype=np.uint8)
-        frame = Frame(img, 1.0, datetime(2026, 10, 10, 14, 3, 15, 870000, tzinfo=timezone.utc), 81234)
+        frame = Frame(img, 1.0, datetime(2026, 10, 10, 14, 3, 15, 870000, tzinfo=UTC), 81234)
     dets = [
         Detection(3, clase, 0.9312, (0.41, 0.52, 0.55, 0.71)),
         Detection(0, "hairnet", 0.77, (0.38, 0.05, 0.52, 0.18)),
@@ -192,8 +192,9 @@ _ids = itertools.count()
 def snap(data, read_time=None, exists=True):
     """DocumentSnapshot falso."""
     return SimpleNamespace(
-        exists=exists, to_dict=lambda: dict(data) if data is not None else None,
-        read_time=read_time or datetime(2026, 10, 10, 15, 0, 0, tzinfo=timezone.utc),
+        exists=exists,
+        to_dict=lambda: dict(data) if data is not None else None,
+        read_time=read_time or datetime(2026, 10, 10, 15, 0, 0, tzinfo=UTC),
     )
 
 

@@ -4,6 +4,7 @@ Mientras no haya lease de un espectador (`control.should_stream()`), no existe n
 Cloud Run. El video sale a STREAM_FPS independiente de INFERENCE_FPS: se envía el frame más
 fresco con las cajas de la última inferencia (corrige L1).
 """
+
 import logging
 import struct
 import threading
@@ -21,7 +22,14 @@ def pack_frame(captured_at_ms: int, jpeg: bytes) -> bytes:
 
 class StreamWorker(threading.Thread):
     def __init__(
-        self, settings, control, health, frames, results, stop: threading.Event, log: logging.Logger,
+        self,
+        settings,
+        control,
+        health,
+        frames,
+        results,
+        stop: threading.Event,
+        log: logging.Logger,
         connect=None,
     ) -> None:
         super().__init__(name="streamer", daemon=True)
@@ -56,7 +64,9 @@ class StreamWorker(threading.Thread):
                         if frame is None:
                             continue
                         img = resize_to_width(annotate(frame, self.results.latest()), self.s.stream_width)
-                        ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, self.s.stream_jpeg_quality])
+                        ok, buf = cv2.imencode(
+                            ".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, self.s.stream_jpeg_quality]
+                        )
                         if ok:
                             ws.send(pack_frame(int(frame.ts_wall.timestamp() * 1000), buf.tobytes()))
                         self.stop_event.wait(max(0.0, period - (time.monotonic() - t0)))

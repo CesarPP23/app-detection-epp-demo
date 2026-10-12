@@ -112,7 +112,7 @@ async def _pump(ws: WebSocket, device_id: str) -> None:
         while True:
             try:
                 seq, frame = await ch.next_frame(seq, timeout=_WAIT_SECONDS)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 await _status(ws, "waiting")
                 continue
             if frame is None:

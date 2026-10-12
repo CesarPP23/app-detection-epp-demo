@@ -2,9 +2,8 @@ import json
 import sqlite3
 import uuid
 
-from epp_edge.outbox import Outbox, local_day, lake_prefix
-
 from _fakes import FakeClock, make_payload, make_pending_dir, make_settings
+from epp_edge.outbox import Outbox, lake_prefix, local_day
 
 
 def open_box(tmp_path, clock=None, **over):
@@ -79,10 +78,19 @@ def test_advance_libera_las_imagenes_locales(tmp_path):
 def test_migra_offline_detections(tmp_path):
     db = tmp_path / "outbox.db"
     con = sqlite3.connect(db)
-    con.execute("CREATE TABLE offline_detections (id INTEGER PRIMARY KEY AUTOINCREMENT, payload TEXT NOT NULL, "
-                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
-    legacy = {"nombre_clase": "hairnet", "clase_id": 0, "confianza_promedio": 0.7, "confianza_max": 0.8,
-              "frame_count": 9, "start_ts": "2026-10-09T10:00:00+00:00", "end_ts": "2026-10-09T10:00:05+00:00"}
+    con.execute(
+        "CREATE TABLE offline_detections (id INTEGER PRIMARY KEY AUTOINCREMENT, payload TEXT NOT NULL, "
+        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+    )
+    legacy = {
+        "nombre_clase": "hairnet",
+        "clase_id": 0,
+        "confianza_promedio": 0.7,
+        "confianza_max": 0.8,
+        "frame_count": 9,
+        "start_ts": "2026-10-09T10:00:00+00:00",
+        "end_ts": "2026-10-09T10:00:05+00:00",
+    }
     con.execute("INSERT INTO offline_detections (payload) VALUES (?)", (json.dumps(legacy),))
     con.commit()
     con.close()

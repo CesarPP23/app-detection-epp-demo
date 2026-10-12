@@ -1,4 +1,5 @@
 """Cableado, señales y ciclo de vida del servicio (2.12)."""
+
 import logging
 import os
 import signal

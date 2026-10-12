@@ -1,4 +1,5 @@
 """Dobles para simular el pipeline completo en la PC: modelo, conexión de streaming y salud."""
+
 import threading
 from types import SimpleNamespace
 

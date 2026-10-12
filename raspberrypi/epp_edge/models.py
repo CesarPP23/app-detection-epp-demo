@@ -1,4 +1,5 @@
 """Tipos compartidos entre captura, inferencia, agregador, capturas y streaming."""
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any

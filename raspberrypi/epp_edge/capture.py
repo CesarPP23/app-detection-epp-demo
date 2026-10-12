@@ -1,11 +1,12 @@
 """Fuentes de video y el hilo de captura. Nunca cae en silencio al video de prueba (D2)."""
+
 import logging
 import sys
 import threading
 import time
 from collections import deque
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import cv2
 import numpy as np
@@ -214,7 +215,7 @@ class CaptureThread(threading.Thread):
                     self._seq += 1
                     now = time.monotonic()
                     self._times.append(now)
-                    self.slot.put(Frame(img, now, datetime.now(timezone.utc), self._seq))
+                    self.slot.put(Frame(img, now, datetime.now(UTC), self._seq))
             finally:
                 self.ok = False
                 source.close()

@@ -2,7 +2,6 @@ import asyncio
 import importlib
 
 import pytest
-
 from helpers_live import DEVICE, SECRET_A, SECRET_B
 
 

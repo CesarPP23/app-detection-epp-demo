@@ -2,9 +2,8 @@ import json
 import logging
 import threading
 
-from epp_edge.outbox import Outbox, Uploader
-
 from _fakes import FakeBucket, FakeClock, FakeDB, make_payload, make_pending_dir, make_settings
+from epp_edge.outbox import Outbox, Uploader
 
 
 def build(tmp_path):

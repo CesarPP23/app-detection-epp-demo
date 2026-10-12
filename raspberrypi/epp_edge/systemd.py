@@ -1,4 +1,5 @@
 """Notificaciones a systemd (sd_notify) sin dependencias."""
+
 import os
 import socket
 

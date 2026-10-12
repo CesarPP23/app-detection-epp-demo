@@ -5,7 +5,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from starlette.testclient import TestClient
-
 from tests.fake_gcp import FakeDB
 
 BASE = "https://epp.test"

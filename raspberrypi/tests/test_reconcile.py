@@ -1,7 +1,7 @@
 """reconcile_lake.py (Fase 5.4) y bootstrap_admin.py (Fase 4.4) con fakes en memoria: sin GCP."""
 
 import importlib.util
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from tools import reconcile_lake as rl
@@ -94,7 +94,7 @@ def test_main_devuelve_uno_si_hay_diferencias(capsys):
 
 def test_limites_del_dia_local_de_lima():
     start, end = rl.local_day_bounds(DAY, "America/Lima")
-    assert start.astimezone(timezone.utc) == datetime(2026, 10, 10, 5, 0, tzinfo=timezone.utc)
+    assert start.astimezone(UTC) == datetime(2026, 10, 10, 5, 0, tzinfo=UTC)
     assert (end - start).days == 1
 
 

@@ -4,6 +4,7 @@
 Ante un error de Firestore se CONSERVA el último estado conocido (corrige D6): el valor por
 defecto solo se usa si nunca hubo una lectura exitosa.
 """
+
 import logging
 import threading
 import time
@@ -83,7 +84,9 @@ class DeviceControl:
         try:
             self._watch = self._doc.on_snapshot(self._on_snapshot)
         except Exception:  # noqa: BLE001
-            self.log.exception("No se pudo suscribir a %s; se usará el sondeo de respaldo", CONTROL_COLLECTION)
+            self.log.exception(
+                "No se pudo suscribir a %s; se usará el sondeo de respaldo", CONTROL_COLLECTION
+            )
             self._watch = None
 
     def _on_snapshot(self, docs, changes, read_time) -> None:
@@ -96,7 +99,9 @@ class DeviceControl:
         try:
             self._apply(self._doc.get())
         except Exception as e:  # noqa: BLE001
-            self.log.warning("Lectura de respaldo de %s falló (se conserva el estado): %s", CONTROL_COLLECTION, e)
+            self.log.warning(
+                "Lectura de respaldo de %s falló (se conserva el estado): %s", CONTROL_COLLECTION, e
+            )
         if self._clock() - self.last_sync > 2 * poll:
             self.log.warning("Sin sincronía con Firestore hace más de %ds; se vuelve a suscribir", 2 * poll)
             self._unsubscribe()
@@ -110,8 +115,8 @@ class DeviceControl:
         try:
             if self._watch is not None:
                 self._watch.unsubscribe()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            self.log.debug("Fallo al cancelar la suscripción anterior (se ignora): %s", e)
         self._watch = None
 
     def close(self) -> None:

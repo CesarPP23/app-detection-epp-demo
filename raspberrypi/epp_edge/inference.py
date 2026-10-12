@@ -1,4 +1,5 @@
 """Hilo de inferencia: toma siempre el frame más reciente y nunca acumula atraso."""
+
 import hashlib
 import logging
 import threading
