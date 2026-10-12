@@ -88,10 +88,10 @@ Todos bajo `/api`, JSON, fechas en ISO-8601 UTC. Rutas tal como están declarada
 | `GET /healthz` | — | `{"ok": true, "version": "2.0.0"}` (fuera de `/api`; Cloud Run reserva `/healthz` como ruta especial — no usarla como healthcheck de aplicación personalizado) |
 | `WS /ws/video/{device_id}` | `DEVICE_TOKEN` (no es un rol de usuario) | Uplink de la Pi; ver sección 3 |
 
-Rutas que no coinciden exactamente con el texto de `docs/PLAN_REMEDIACION.md` (el código real
-manda): el plan describía `GET /devices/{id}/events` sin el prefijo `/api`, que en el código vive
-bajo `/api/devices`; y la respuesta de error usa siempre el formato de la sección 4, no el
-`ErrorResponse` genérico de ejemplo del plan.
+El contrato implementado coincide con `docs/PLAN_REMEDIACION.md` sección 3.3 en rutas, roles y
+formas de respuesta; la única nota es que el plan deja implícito el prefijo `/api` en el texto de
+cada fila de esa tabla ("todos bajo `/api`" en el encabezado), mientras que esta página lo escribe
+explícito en cada ruta para evitar ambigüedad al copiarla a un cliente HTTP.
 
 ## 3. Protocolo binario del video
 
