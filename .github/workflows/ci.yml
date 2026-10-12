@@ -1,0 +1,169 @@
+name: CI
+
+# Sin credenciales de GCP y sin despliegues (Fase 8 del plan de remediación). Los 5 jobs
+# corren en paralelo; cada uno es independiente de los demás.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  secrets:
+    name: secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar gitleaks
+        run: |
+          curl -sSL -o gitleaks.tar.gz \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install gitleaks /usr/local/bin/gitleaks
+          rm gitleaks.tar.gz
+
+      # Solo el árbol de trabajo, no el historial: el historial de git contiene dos
+      # credenciales ya revocadas (ver docs/PLAN_REMEDIACION.md, Fase 8) que no se van a
+      # reescribir. Si algo nuevo se filtra en un commit, este job debe fallar igual porque
+      # el secreto quedaría también en el árbol de trabajo del PR.
+      - name: gitleaks detect (árbol de trabajo)
+        run: gitleaks detect --source . --no-git --redact -v
+
+  python:
+    name: python (ruff + pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Instalar ruff
+        run: pip install ruff==0.17.0
+
+      - name: ruff check
+        run: ruff check backend/ raspberrypi/
+
+      - name: ruff format --check
+        run: ruff format --check backend/ raspberrypi/
+
+      - name: Instalar dependencias de backend/
+        run: pip install -r backend/requirements-dev.txt
+
+      - name: pytest backend/
+        run: pytest -q backend/tests
+
+      - name: Instalar dependencias de raspberrypi/ (sin ultralytics ni picamera2)
+        run: pip install -r raspberrypi/requirements-dev.txt
+
+      - name: pytest raspberrypi/
+        run: pytest -q raspberrypi/tests
+
+  frontend:
+    name: frontend (lint + typecheck + test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Instalar dependencias de backend/ (solo para generar el OpenAPI, sin GCP)
+        run: pip install -r backend/requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+
+      - name: Habilitar pnpm (corepack, versión fijada en frontend/package.json)
+        run: corepack enable
+
+      - name: pnpm install --frozen-lockfile
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: pnpm lint
+        working-directory: frontend
+        run: pnpm lint
+
+      - name: pnpm typecheck
+        working-directory: frontend
+        run: pnpm typecheck
+
+      - name: pnpm test
+        working-directory: frontend
+        run: pnpm test
+
+      - name: pnpm build
+        working-directory: frontend
+        run: pnpm build
+
+      - name: Presupuesto de JS inicial (< 180 KB gzip, plan 3.5)
+        working-directory: frontend
+        run: pnpm check:budget
+
+      - name: Regenerar openapi.json desde el backend
+        run: python backend/scripts/dump_openapi.py frontend/openapi.json
+
+      - name: Falla si frontend/openapi.json quedó desactualizado
+        run: git diff --exit-code -- frontend/openapi.json
+
+      - name: Regenerar src/api/schema.d.ts desde el OpenAPI
+        working-directory: frontend
+        run: pnpm gen:api
+
+      - name: Falla si src/api/schema.d.ts quedó desactualizado
+        run: git diff --exit-code -- frontend/src/api/schema.d.ts
+
+  e2e:
+    name: e2e (Playwright + MSW + axe-core)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+
+      - name: Habilitar pnpm (corepack, versión fijada en frontend/package.json)
+        run: corepack enable
+
+      - name: pnpm install --frozen-lockfile
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Instalar navegador de Playwright
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Playwright levanta `vite preview` con MSW interceptando la API: sin backend real,
+      # sin credenciales. Cubre las 7 pantallas en tema claro y oscuro (accesibilidad con
+      # axe-core) más los recorridos funcionales y visuales en 360/768/1440 px.
+      - name: pnpm test:e2e
+        working-directory: frontend
+        run: pnpm test:e2e
+
+      - name: Subir el reporte de Playwright si falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+  image:
+    name: image (docker build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: docker build .
+        run: docker build .

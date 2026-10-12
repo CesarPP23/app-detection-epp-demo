@@ -1,13 +1,12 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
+from _fakes import FakeClock, make_settings, snap
 from epp_edge.control import DeviceControl, HealthReporter
 
-from _fakes import FakeClock, make_settings, snap
-
 LOG = logging.getLogger("test")
-T0 = datetime(2026, 10, 10, 15, 0, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 10, 10, 15, 0, 0, tzinfo=UTC)
 
 
 class FakeControlDB:
@@ -44,8 +43,12 @@ def make(tmp_path, **over):
 
 
 def lease_doc(age, lease=90, requested=True, desired="running"):
-    return {"desired_state": desired, "stream_requested": requested, "lease_seconds": lease,
-            "lease_renewed_at": T0 - timedelta(seconds=age)}
+    return {
+        "desired_state": desired,
+        "stream_requested": requested,
+        "lease_seconds": lease,
+        "lease_renewed_at": T0 - timedelta(seconds=age),
+    }
 
 
 def test_lease_vigente_descuenta_la_edad_del_servidor(tmp_path):
@@ -78,8 +81,12 @@ def test_renovar_el_lease_lo_extiende(tmp_path):
     ctl, _, clock = make(tmp_path)
     ctl._apply(snap(lease_doc(age=0), read_time=T0))
     clock.advance(60)
-    ctl._apply(snap({**lease_doc(age=0), "lease_renewed_at": T0 + timedelta(seconds=60)},
-                    read_time=T0 + timedelta(seconds=60)))
+    ctl._apply(
+        snap(
+            {**lease_doc(age=0), "lease_renewed_at": T0 + timedelta(seconds=60)},
+            read_time=T0 + timedelta(seconds=60),
+        )
+    )
     clock.advance(60)
     assert ctl.should_stream()
 
@@ -170,14 +177,18 @@ def test_health_escribe_estado_y_outbox(tmp_path):
     h.write()
     data, merge = doc.writes[0]
     assert merge is True
-    assert data["reported_state"] == "running" and data["outbox_pending"] == 3 and data["outbox_bytes"] == 1234
+    assert (
+        data["reported_state"] == "running" and data["outbox_pending"] == 3 and data["outbox_bytes"] == 1234
+    )
     assert data["edge_version"] == "2.0.0" and "last_seen" in data and "cpu_temp_c" in data
 
 
 def test_health_final_deja_offline(tmp_path):
     doc = FakeHealthDoc()
     db = SimpleNamespace(collection=lambda name: SimpleNamespace(document=lambda _id: doc))
-    h = HealthReporter(db, make_settings(tmp_path), SimpleNamespace(stats=lambda: {"pending": 0, "bytes": 0}), LOG)
+    h = HealthReporter(
+        db, make_settings(tmp_path), SimpleNamespace(stats=lambda: {"pending": 0, "bytes": 0}), LOG
+    )
     h.set_streaming(True)
     h.final("offline")
     data, _ = doc.writes[-1]

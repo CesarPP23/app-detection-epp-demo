@@ -4,10 +4,9 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
+from helpers_live import DEVICE, SECRET_A, SECRET_B, make_frame, wait_until
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
-
-from helpers_live import DEVICE, SECRET_A, SECRET_B, make_frame, wait_until
 
 UPLINK = {"authorization": f"Bearer {SECRET_A}"}
 USER = SimpleNamespace(email="viewer@viz-ia.com", role="viewer")
@@ -52,7 +51,9 @@ def build(monkeypatch, user=USER, **env):
         return user
 
     monkeypatch.setattr(live, "_authenticate", fake_auth)
-    monkeypatch.setattr(live, "_audit", lambda email, action, target: rec.audit.append((email, action, target)))
+    monkeypatch.setattr(
+        live, "_audit", lambda email, action, target: rec.audit.append((email, action, target))
+    )
     app = FastAPI()
     app.include_router(relay.router)
     app.include_router(live.router)

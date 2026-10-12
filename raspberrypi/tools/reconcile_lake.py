@@ -38,6 +38,7 @@ class Sources(Protocol):
     def firestore_events(self, device_id: str, day: date) -> dict[str, str]:
         """{event_id: capture_status} de los documentos del día."""
         ...
+
     def lake_event_ids(self, device_id: str, day: date) -> set[str]: ...
     def lake_image_ids(self, device_id: str, day: date) -> set[str]: ...
     def bigquery_event_ids(self, device_id: str, day: date) -> set[str]: ...
@@ -88,7 +89,9 @@ def reconcile(src: Sources, device_id: str, day: date, check_bigquery: bool = Tr
     }
 
     if stats is not None and stats != len(doc_ids):
-        rep.missing["daily_stats.events != documentos (diferencia de contadores)"] = f"{stats} vs {len(doc_ids)}"  # type: ignore[assignment]
+        rep.missing["daily_stats.events != documentos (diferencia de contadores)"] = (
+            f"{stats} vs {len(doc_ids)}"  # type: ignore[assignment]
+        )
     if stats is None and doc_ids:
         rep.missing["no existe el documento daily_stats del día"] = "hay eventos pero falta el resumen"  # type: ignore[assignment]
     _diff(rep.missing, "en Firestore pero sin sidecar en el lake", doc_ids - sidecars)
@@ -123,11 +126,24 @@ def local_day_bounds(day: date, tz_name: str) -> tuple[datetime, datetime]:
 class GcpSources:
     """Lee de Firestore, GCS y BigQuery con ADC. Los clientes se pueden inyectar (tests)."""
 
-    def __init__(self, events_db: Any, bucket: Any, bq: Any | None, tz_name: str = "America/Lima", project: str = PROJECT):
-        self.events_db, self.bucket, self.bq, self.tz_name, self.project = events_db, bucket, bq, tz_name, project
+    def __init__(
+        self,
+        events_db: Any,
+        bucket: Any,
+        bq: Any | None,
+        tz_name: str = "America/Lima",
+        project: str = PROJECT,
+    ):
+        self.events_db, self.bucket, self.bq, self.tz_name, self.project = (
+            events_db,
+            bucket,
+            bq,
+            tz_name,
+            project,
+        )
 
     @classmethod
-    def from_env(cls, project: str, lake_bucket: str, tz_name: str, with_bq: bool) -> "GcpSources":
+    def from_env(cls, project: str, lake_bucket: str, tz_name: str, with_bq: bool) -> GcpSources:
         from google.cloud import bigquery, firestore, storage
 
         return cls(
@@ -175,8 +191,10 @@ class GcpSources:
             return set()
         from google.cloud import bigquery
 
+        # Solo se interpola el project id (interno, no viene del usuario); los valores de
+        # filtro van parametrizados abajo (@d, @tz, @day).
         job = self.bq.query(
-            f"SELECT event_id FROM `{self.project}.epp_lake.events` "
+            f"SELECT event_id FROM `{self.project}.epp_lake.events` "  # noqa: S608
             "WHERE device_id = @d AND DATE(end_ts, @tz) = @day",
             job_config=bigquery.QueryJobConfig(
                 query_parameters=[
@@ -190,7 +208,9 @@ class GcpSources:
 
 
 class SampleSources:
-    """Datos de prueba para --dry-run: coherentes en las capas 1-4 y con un evento aún sin cargar a BigQuery."""
+    """Datos de prueba para --dry-run: coherentes en las capas 1-4 y con un evento aún sin
+    cargar a BigQuery.
+    """
 
     IDS = [
         "0192f6c4-8a1e-7c3b-9f2d-4b8e1a2c3d4e",
@@ -228,8 +248,14 @@ def main(argv: list[str] | None = None, sources: Sources | None = None) -> int:
     if args.dry_run:
         sources = SampleSources()
     if sources is None:
-        sources = GcpSources.from_env(args.project, args.bucket or f"{args.project}-lake", args.timezone, not args.skip_bq)
-    day = date.fromisoformat(args.date) if args.date else (datetime.now(ZoneInfo(args.timezone)).date() - timedelta(days=1))
+        sources = GcpSources.from_env(
+            args.project, args.bucket or f"{args.project}-lake", args.timezone, not args.skip_bq
+        )
+    day = (
+        date.fromisoformat(args.date)
+        if args.date
+        else (datetime.now(ZoneInfo(args.timezone)).date() - timedelta(days=1))
+    )
 
     report = reconcile(sources, args.device, day, check_bigquery=not args.skip_bq)
     print(report.render())

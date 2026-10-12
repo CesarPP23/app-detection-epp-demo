@@ -4,6 +4,7 @@ Todo se escribe en DATA_DIR/pending/{event_id}/ de forma atómica (.tmp + os.rep
 Uploader lo sube después. Un evento NUNCA se descarta porque su captura falle: se registra con
 `capture.status` ("missing" aquí; "dropped_disk_full" lo marca el Outbox).
 """
+
 import copy
 import hashlib
 import json
@@ -64,7 +65,9 @@ def build_capture(ev: ClosedEvent, s) -> CaptureFiles:
     pending_dir = Path(s.data_dir) / "pending" / event_id
     try:
         original = _encode(frame.image, s.capture_jpeg_quality)
-        thumb_img = draw_detections(resize_to_width(frame.image, s.thumb_width), ev.best_detections, p["nombre_clase"])
+        thumb_img = draw_detections(
+            resize_to_width(frame.image, s.thumb_width), ev.best_detections, p["nombre_clase"]
+        )
         thumb = _encode(thumb_img, s.thumb_jpeg_quality)
 
         h, w = frame.image.shape[:2]
@@ -95,5 +98,7 @@ def build_capture(ev: ClosedEvent, s) -> CaptureFiles:
     except Exception as e:  # noqa: BLE001 - el evento se conserva sin imagen
         log.exception("No se pudo construir la captura de %s", event_id)
         shutil.rmtree(pending_dir, ignore_errors=True)
-        return CaptureFiles(event_id, None, _no_capture(p, "missing", f"{type(e).__name__}: {e}"[:200]), "missing")
+        return CaptureFiles(
+            event_id, None, _no_capture(p, "missing", f"{type(e).__name__}: {e}"[:200]), "missing"
+        )
     return CaptureFiles(event_id, pending_dir, p, "ok")

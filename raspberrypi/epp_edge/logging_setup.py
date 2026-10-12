@@ -1,4 +1,5 @@
 """Logging del borde: stderr (journald bajo systemd) y, opcionalmente, archivo rotativo."""
+
 import logging
 import logging.handlers
 import sys

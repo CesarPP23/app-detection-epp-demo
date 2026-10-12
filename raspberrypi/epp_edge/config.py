@@ -1,4 +1,5 @@
 """Configuración del borde, validada al arrancar (fail-closed)."""
+
 import logging
 import os
 import re

@@ -5,6 +5,7 @@ Firestore, su captura ya está en el lake. `stage` avanza solo cuando el paso te
 que un reinicio retoma donde quedó. Los objetos se crean con `if_generation_match=0` (la SA de
 la Pi solo puede crear): `PreconditionFailed` significa "ya existía" y se trata como éxito.
 """
+
 import json
 import logging
 import shutil
@@ -12,7 +13,7 @@ import sqlite3
 import threading
 import time
 from collections import namedtuple
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -33,8 +34,8 @@ def iso(o: Any) -> str:
     """`default` de json.dumps: datetimes en UTC con milisegundos y sufijo Z."""
     if isinstance(o, datetime):
         if o.tzinfo is None:
-            o = o.replace(tzinfo=timezone.utc)
-        return o.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+            o = o.replace(tzinfo=UTC)
+        return o.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
     if isinstance(o, Path):
         return str(o)
     raise TypeError(f"no serializable: {type(o).__name__}")
@@ -42,7 +43,7 @@ def iso(o: Any) -> str:
 
 def parse_ts(v: Any) -> datetime:
     if isinstance(v, datetime):
-        return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+        return v if v.tzinfo else v.replace(tzinfo=UTC)
     return datetime.fromisoformat(str(v).replace("Z", "+00:00"))
 
 
@@ -142,7 +143,13 @@ class Outbox:
             cur = self._conn.execute(
                 "INSERT OR IGNORE INTO outbox (event_id, payload, pending_dir, stage, created_at) "
                 "VALUES (?,?,?,?,?)",
-                (payload["event_id"], data, str(pending_dir) if pending_dir else None, "images", self._clock()),
+                (
+                    payload["event_id"],
+                    data,
+                    str(pending_dir) if pending_dir else None,
+                    "images",
+                    self._clock(),
+                ),
             )
             inserted = cur.rowcount == 1
         self.enforce_cap()
@@ -153,23 +160,29 @@ class Outbox:
         if stage not in STAGES:
             raise ValueError(f"stage inválido: {stage}")
         with self._lock:
-            row = self._conn.execute("SELECT pending_dir FROM outbox WHERE event_id=?", (event_id,)).fetchone()
+            row = self._conn.execute(
+                "SELECT pending_dir FROM outbox WHERE event_id=?", (event_id,)
+            ).fetchone()
             if row is None:
                 return
             if stage != "images" and row[0]:
                 shutil.rmtree(row[0], ignore_errors=True)
                 self._conn.execute(
-                    "UPDATE outbox SET stage=?, pending_dir=NULL, attempts=0, last_error=NULL WHERE event_id=?",
+                    "UPDATE outbox SET stage=?, pending_dir=NULL, attempts=0, last_error=NULL "
+                    "WHERE event_id=?",
                     (stage, event_id),
                 )
             else:
                 self._conn.execute(
-                    "UPDATE outbox SET stage=?, attempts=0, last_error=NULL WHERE event_id=?", (stage, event_id)
+                    "UPDATE outbox SET stage=?, attempts=0, last_error=NULL WHERE event_id=?",
+                    (stage, event_id),
                 )
 
     def ack(self, event_id: str) -> None:
         with self._lock:
-            row = self._conn.execute("SELECT pending_dir FROM outbox WHERE event_id=?", (event_id,)).fetchone()
+            row = self._conn.execute(
+                "SELECT pending_dir FROM outbox WHERE event_id=?", (event_id,)
+            ).fetchone()
             self._conn.execute("DELETE FROM outbox WHERE event_id=?", (event_id,))
         if row and row[0]:
             shutil.rmtree(row[0], ignore_errors=True)
@@ -229,7 +242,10 @@ class Outbox:
         """{'pending': filas, 'bytes': tamaño de capturas pendientes} para device_health."""
         with self._lock:
             n = self._conn.execute("SELECT COUNT(*) FROM outbox").fetchone()[0]
-            dirs = [r[0] for r in self._conn.execute("SELECT pending_dir FROM outbox WHERE pending_dir IS NOT NULL")]
+            dirs = [
+                r[0]
+                for r in self._conn.execute("SELECT pending_dir FROM outbox WHERE pending_dir IS NOT NULL")
+            ]
         return {"pending": n, "bytes": sum(_dir_size(d) for d in dirs)}
 
     def stages(self) -> dict[str, int]:
@@ -257,10 +273,13 @@ class Outbox:
                     continue
                 total -= sizes[event_id]
                 shutil.rmtree(pending_dir, ignore_errors=True)
-                self._set_capture_status(event_id, json.loads(payload), "dropped_disk_full", "outbox_max_bytes")
+                self._set_capture_status(
+                    event_id, json.loads(payload), "dropped_disk_full", "outbox_max_bytes"
+                )
                 dropped += 1
                 self.log.critical(
-                    "Outbox por encima de OUTBOX_MAX_BYTES: se descartó la captura de %s (el evento se conserva)",
+                    "Outbox por encima de OUTBOX_MAX_BYTES: se descartó la captura de %s "
+                    "(el evento se conserva)",
                     event_id,
                 )
         return dropped
@@ -272,7 +291,10 @@ class Outbox:
         if not pending.is_dir():
             return
         with self._lock:
-            known = {r[0] for r in self._conn.execute("SELECT pending_dir FROM outbox WHERE pending_dir IS NOT NULL")}
+            known = {
+                r[0]
+                for r in self._conn.execute("SELECT pending_dir FROM outbox WHERE pending_dir IS NOT NULL")
+            }
         for d in pending.iterdir():
             if d.is_dir() and str(d) not in known:
                 self.log.warning("Captura huérfana eliminada: %s", d.name)
@@ -290,7 +312,9 @@ class Outbox:
             return
         from .ids import uuid7
 
-        rows = self._conn.execute("SELECT id, payload, created_at FROM offline_detections ORDER BY id").fetchall()
+        rows = self._conn.execute(
+            "SELECT id, payload, created_at FROM offline_detections ORDER BY id"
+        ).fetchall()
         self._conn.execute("BEGIN")
         try:
             for _id, raw, created in rows:
@@ -302,7 +326,13 @@ class Outbox:
                 self._conn.execute(
                     "INSERT OR IGNORE INTO outbox (event_id, payload, pending_dir, stage, created_at) "
                     "VALUES (?,?,?,?,?)",
-                    (p["event_id"], json.dumps(p, separators=(",", ":"), default=iso), None, "firestore", self._clock()),
+                    (
+                        p["event_id"],
+                        json.dumps(p, separators=(",", ":"), default=iso),
+                        None,
+                        "firestore",
+                        self._clock(),
+                    ),
                 )
             self._conn.execute("DROP TABLE offline_detections")
             self._conn.execute("COMMIT")
@@ -338,7 +368,9 @@ class Outbox:
 class Uploader(threading.Thread):
     """Hilo que corre siempre (también con la detección pausada) y vacía el outbox."""
 
-    def __init__(self, outbox: Outbox, events_db, bucket, s, stop: threading.Event, log: logging.Logger) -> None:
+    def __init__(
+        self, outbox: Outbox, events_db, bucket, s, stop: threading.Event, log: logging.Logger
+    ) -> None:
         super().__init__(name="uploader", daemon=True)
         self.outbox, self.bucket, self.s, self.stop_event, self.log = outbox, bucket, s, stop, log
         self.events_db = events_db
@@ -373,7 +405,9 @@ class Uploader(threading.Thread):
             return True
         except Exception as e:  # noqa: BLE001 - cualquier fallo se reintenta con backoff
             self.outbox.nack(row.event_id, f"{type(e).__name__}: {e}")
-            self.log.warning("Subida de %s falló en '%s' (intento %d): %s", row.event_id, row.stage, row.attempts + 1, e)
+            self.log.warning(
+                "Subida de %s falló en '%s' (intento %d): %s", row.event_id, row.stage, row.attempts + 1, e
+            )
             return False
 
     def _process(self, row: OutboxRow) -> None:

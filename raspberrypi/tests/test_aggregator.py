@@ -1,9 +1,9 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from epp_edge.aggregator import DetectionAggregator
 from epp_edge.models import Detection, Frame, Inference
 
-T0 = datetime(2026, 10, 10, 14, 0, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 10, 10, 14, 0, 0, tzinfo=UTC)
 IMG = object()  # el agregador no toca la imagen
 
 

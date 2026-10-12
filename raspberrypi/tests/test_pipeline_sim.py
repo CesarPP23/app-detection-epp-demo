@@ -4,6 +4,7 @@ agregador -> captura -> outbox -> uploader) y dobles en memoria para GCP.
 No usa GCP, ultralytics ni picamera2. Los hilos y el FileSource son los de producción; el modelo
 es FakeModel (detecciones deterministas) y el bucket/Firestore son los de _fakes.
 """
+
 import json
 import logging
 import threading
@@ -14,13 +15,12 @@ import cv2
 import numpy as np
 import pytest
 from _fakes import FakeBucket, FakeClock, FakeDB, snap
-from fakes import ConnectSpy, FakeModel, RecordingDB
-
 from epp_edge import capture as capture_mod
 from epp_edge.app import Pipeline
 from epp_edge.config import ConfigError, Settings
 from epp_edge.control import DeviceControl, HealthReporter
 from epp_edge.outbox import Outbox, Uploader
+from fakes import ConnectSpy, FakeModel, RecordingDB
 
 log = logging.getLogger("sim")
 REAL_VIDEO = Path(__file__).resolve().parents[1] / "media" / "prueba1.mp4"
@@ -122,7 +122,7 @@ class Rig:
 
     def docs(self):
         pre = "detecciones_confirmadas/"
-        return {k[len(pre):]: v for k, v in self.events_db.store.items() if k.startswith(pre)}
+        return {k[len(pre) :]: v for k, v in self.events_db.store.items() if k.startswith(pre)}
 
 
 # --- (1) un evento = 3 objetos en el lake + documento en Firestore -------------------------------

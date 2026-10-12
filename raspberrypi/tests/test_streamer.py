@@ -2,16 +2,14 @@ import logging
 import struct
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import numpy as np
-
+from _fakes import make_settings
 from epp_edge.models import Frame
 from epp_edge.slots import LatestSlot
 from epp_edge.streamer import StreamWorker, pack_frame
-
-from _fakes import make_settings
 
 LOG = logging.getLogger("test")
 
@@ -32,7 +30,7 @@ class FakeWS:
 
 def worker(tmp_path, should_stream, connect):
     frames, results = LatestSlot(), LatestSlot()
-    ts = datetime(2026, 10, 10, 14, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 10, 10, 14, 0, 0, tzinfo=UTC)
     frames.put(Frame(np.zeros((360, 640, 3), np.uint8), time.monotonic(), ts, 1))
     control = SimpleNamespace(should_stream=should_stream)
     health = SimpleNamespace(set_streaming=lambda on: None)
@@ -68,5 +66,5 @@ def test_con_lease_envia_frames_con_cabecera_y_jpeg(tmp_path):
     w.join(3)
     assert ws.sent
     msg = ws.sent[0]
-    assert struct.unpack(">Q", msg[:8])[0] == int(datetime(2026, 10, 10, 14, tzinfo=timezone.utc).timestamp() * 1000)
+    assert struct.unpack(">Q", msg[:8])[0] == int(datetime(2026, 10, 10, 14, tzinfo=UTC).timestamp() * 1000)
     assert msg[8:10] == b"\xff\xd8"

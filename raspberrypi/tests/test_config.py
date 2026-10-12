@@ -1,5 +1,4 @@
 import pytest
-
 from epp_edge.config import ConfigError, Settings
 
 BASE = {
@@ -31,7 +30,7 @@ def test_obligatorias(missing):
 
 def test_token_corto_rechazado():
     with pytest.raises(ConfigError, match="32"):
-        Settings.from_env(env(DEVICE_TOKEN="corto"))
+        Settings.from_env(env(DEVICE_TOKEN="corto"))  # noqa: S106 - valor de prueba, no un secreto real
 
 
 def test_host_sin_esquema():

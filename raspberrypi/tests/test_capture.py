@@ -5,7 +5,6 @@ from dataclasses import replace
 import cv2
 import numpy as np
 import pytest
-
 from epp_edge import capture
 from epp_edge.capture import CaptureError, CaptureThread, FileSource, build_source
 from epp_edge.config import Settings

@@ -47,7 +47,7 @@ def test_sin_secretos_no_arranca(monkeypatch, missing):
 
 def test_secreto_corto_no_arranca(monkeypatch):
     with pytest.raises(RuntimeError):
-        load_app(monkeypatch, DEVICE_TOKEN="corto")
+        load_app(monkeypatch, DEVICE_TOKEN="corto")  # noqa: S106 - valor de prueba, no un secreto real
 
 
 def test_modo_dev_prohibido_en_cloud_run(monkeypatch):
@@ -75,7 +75,9 @@ def test_uplink_rechazado_cierra_1008(monkeypatch, headers, device):
 def test_uplink_valido_acepta(monkeypatch):
     app, relay = load_app(monkeypatch)
     with TestClient(app) as client:
-        with client.websocket_connect(f"/ws/video/{DEVICE}", headers={"authorization": f"Bearer {SECRET_A}"}) as ws:
+        with client.websocket_connect(
+            f"/ws/video/{DEVICE}", headers={"authorization": f"Bearer {SECRET_A}"}
+        ) as ws:
             ws.send_bytes(make_frame(1))
 
 
@@ -135,7 +137,9 @@ def test_frames_invalidos_se_ignoran(monkeypatch):
 def test_frame_invalido_no_se_publica_por_websocket(monkeypatch):
     app, relay = load_app(monkeypatch)
     with TestClient(app) as client:
-        with client.websocket_connect(f"/ws/video/{DEVICE}", headers={"authorization": f"Bearer {SECRET_A}"}) as ws:
+        with client.websocket_connect(
+            f"/ws/video/{DEVICE}", headers={"authorization": f"Bearer {SECRET_A}"}
+        ) as ws:
             ws.send_bytes(b"basura")
             ws.send_bytes(make_frame(7))
         # el publicador cerró: canal sin señal, pero la secuencia avanzó por el frame válido y el cierre

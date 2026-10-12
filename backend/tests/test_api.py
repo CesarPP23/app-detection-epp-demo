@@ -2,7 +2,6 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from starlette.websockets import WebSocketDisconnect
-
 from tests.conftest import BASE, DEVICE, HDR, make_event
 
 GOOD_INFO = {"email": "Viewer@X.com", "name": "Vi Ewer", "picture": "https://img.test/a.png"}
