@@ -1,0 +1,32 @@
+[Unit]
+Description=EPP Edge - deteccion YOLO, capturas al data lake y streaming bajo demanda
+Wants=network-online.target time-sync.target
+After=network-online.target time-sync.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=epp
+Group=epp
+SupplementaryGroups=video
+WorkingDirectory=/opt/epp-edge/app/raspberrypi
+EnvironmentFile=/etc/epp-edge/edge.env
+Environment=HOME=/var/lib/epp-edge YOLO_CONFIG_DIR=/var/lib/epp-edge/ultralytics PYTHONUNBUFFERED=1
+ExecStart=/opt/epp-edge/venv/bin/python -m epp_edge
+Restart=always
+RestartSec=5
+WatchdogSec=60
+TimeoutStartSec=180
+TimeoutStopSec=30
+KillSignal=SIGTERM
+StateDirectory=epp-edge
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/epp-edge
+MemoryMax=75%
+
+[Install]
+WantedBy=multi-user.target
