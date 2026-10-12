@@ -30,7 +30,7 @@ Rama de trabajo: `remediacion/auditoria-2026-10` → al final PR hacia `main` (*
 - Admin inicial: `admin@viz-ia.com`.
 - Una captura por evento (`event_id` UUIDv7). Imágenes 60 días. Tema claro por defecto, sin logo.
 - URL `*.run.app`; healthcheck listo pero deshabilitado; quitar rol Editor de la SA de cómputo solo si el deploy con la SA de build funciona; publicar `edge.env.template` con valores falsos + gitleaks; sin difuminado de caras.
-- Sin Pi física: validar con simulador (`CAMERA_SOURCE=file:...`, `ALLOW_TEST_VIDEO=true`).
+- **Desde 2026-10-11 hay Pi física disponible** (`edge-vizia-sac`, usuario `vizia`), instalada y funcionando — ya no hace falta el simulador (`CAMERA_SOURCE=file:...`, `ALLOW_TEST_VIDEO=true`) salvo para pruebas rápidas sin tocar el hardware real.
 
 ## 4. Arquitectura
 - **Edge (Pi)** `raspberrypi/epp_edge/`: picamera2/USB/file → LatestSlot → InferenceWorker (NCNN, imgsz 416, ≤5 fps) → Aggregator → Outbox SQLite WAL → Uploader idempotente (imágenes → sidecar JSON → batch.create en Firestore + daily_stats Increment). StreamWorker solo con lease activo. DeviceControl por Firestore `on_snapshot`. HealthReporter.
@@ -55,46 +55,42 @@ Rama de trabajo: `remediacion/auditoria-2026-10` → al final PR hacia `main` (*
 
 ## 6. Recursos GCP (IDs, no son secretos)
 - Proyecto `epp-detection-v1`, número `540868081764`, región `us-central1`.
-- Servicio Cloud Run `orchestrator-service`: `https://orchestrator-service-540868081764.us-central1.run.app`.
-- SA runtime: `platform-runtime@epp-detection-v1.iam.gserviceaccount.com`. SA de la Pi: `raspberry-pi-worker@...` (la key antigua fue rotada/eliminada; incidente de key filtrada en historial público: solo rotación, sin reescribir historial).
-- Secretos en Secret Manager: `device-token`, `session-secret` (nunca leer valores).
+- Servicio Cloud Run `orchestrator-service`: `https://orchestrator-service-540868081764.us-central1.run.app`. Decisión confirmada 2026-10-11: queda **público** (`allow-unauthenticated`), protegido por login Google + whitelist; el costo de una visita anónima es despreciable porque lo caro (streaming) está detrás del login. Falta configurar la alerta de presupuesto (acción manual del usuario).
+- SA runtime: `platform-runtime@epp-detection-v1.iam.gserviceaccount.com`. SA de la Pi: `raspberry-pi-worker@epp-detection-v1.iam.gserviceaccount.com` — roles confirmados (solo lectura, 2026-10-11): `roles/datastore.user` a nivel de proyecto + `roles/storage.objectCreator` en `gs://epp-detection-v1-lake` (mínimo privilegio, correcto). **Dos keys activas ahora**: la vieja `b78e4fdf...` (2026-09-20, archivo perdido al cambiar de laptop, nadie la puede usar ya) y una nueva creada hoy (key id `bbb3d16c...`) ya copiada a `/etc/epp-edge/gcp-key.json` en la Pi física y funcionando. **Pendiente**: revocar `b78e4fdf...` con OK del usuario, por higiene (ya no sirve para nada, no tiene sentido dejarla viva).
+- Secretos en Secret Manager: `device-token`, `session-secret` (nunca leer valores; `device-token` ya se copió a la Pi real y el streaming funciona con él).
 - OAuth: cliente web "EPP Monitor web", client ID `540868081764-dl5ke27nl1grk10gt6u2t1a0ottsci15.apps.googleusercontent.com` (no secreto). Orígenes autorizados: la URL de Cloud Run y `http://localhost:5173`. Client secret no se usa (GIS) y nunca se copió.
 - Proyecto huérfano `woven-surface-469602-g1`: preguntar al usuario antes de tocarlo.
-- Billing account: la del proyecto; hay línea base de costos en `docs/COSTS.md`.
+- Billing account: la del proyecto; hay línea base de costos en `docs/COSTS.md` (estimada, aún sin verificar contra Billing real).
+- Cuenta gcloud usada en la laptop nueva: `pruebavizia7@gmail.com`, rol `Owner` en el proyecto (verificado). `gcloud` no estaba instalado en esta laptop; se instaló con `winget install --id Google.CloudSDK`.
 
-## 7. Estado actual (2026-10-11)
-### Hecho
-- Fases 0–3 completas (criterios que necesitan GCP real se cierran en Fases 4/10). Fase 1: Docker verificado vía Cloud Build (imagen 70.7 MB).
-- Scripts de infra (Fase 4/5) escritos y commiteados.
-- Bloque 4.A ejecutado (limpieza de key vieja, roles Pub/Sub, límites de Cloud Run).
-- Google Auth Platform configurado: app "EPP Monitor", audiencia **External en modo Testing**. **No se puede publicar a producción** porque Google exige un dominio privado propio en "Authorized domains" y `run.app` es sufijo público. Se dejó en Testing con `admin@viz-ia.com` como usuario de prueba (tope 100). Cada usuario nuevo del dashboard debe añadirse también en Audience → Test users. Para publicar haría falta un dominio propio (anotar como limitación en SECURITY.md/ADR).
-- Bloque 4.B ejecutado:
-  - `04_firestore.sh` (exit 0): 3 índices compuestos en `dbraspberry` READY, TTL de `audit_log.expire_at` en `(default)`, delete protection en ambas bases, backup semanal (domingo, 4 semanas).
-  - Reglas Firestore: ya había deny-all activo en ambas bases (idéntico a `infra/firestore.rules`); no se publicó nada.
-  - `bootstrap_admin.py`: creados `device_control/raspberry-pi-01` y `dashboard_users/admin@viz-ia.com` en `(default)`.
-  - `06_bigquery.sh` **parcial**: creados dataset `epp_lake`, conexión `lake-conn` y permiso de lectura sobre el bucket. La tabla externa `raw_events` falla ("Cannot query hive partitioned data … without any associated files") porque el bucket está vacío. Reintentar en Fase 5 tras la primera subida de eventos (el script es relanzable).
-- Deploy a Cloud Run: **hecho** (revisión `orchestrator-service-00007-vxs`, 100 % tráfico). max-instances=1, min 0, 512 Mi, CPU solo en peticiones, `UPLINK_TOKEN` ausente, secretos `DEVICE_TOKEN` y `SESSION_SECRET`. `/api/auth/config` responde con el client ID. `/healthz` devuelve 404 porque Cloud Run reserva esa ruta: usar otra ruta (p. ej. `/api/health`) para el healthcheck.
+## 7. Estado actual (2026-10-11, sesión en laptop nueva — clon fresco)
+### Hecho hoy (laptop nueva, además de lo heredado de la laptop anterior)
+- Repo clonado (`--single-branch`) y luego también se trajo `origin/main` (`git fetch origin main:refs/remotes/origin/main`) porque los subagentes con `isolation: worktree` la necesitan como base.
+- **Fases 6, 7, 8 y 9 completadas** vía 4 subagentes en paralelo (3 en worktrees aislados + 1 directo en el checkout principal porque necesitaba `torch/best.pt`), fusionadas sin conflictos y **pusheadas** a `origin/remediacion/auditoria-2026-10` (HEAD actual: `0eb919d`; ver `git log --oneline origin/remediacion/auditoria-2026-10` en vez de una lista fija de hashes, ya son demasiados commits).
+  - Fase 6: `raspberrypi/deploy/{install.sh,epp-edge.service,update.sh}`, `docs/EDGE_DEPLOYMENT.md`, `docs/OPERATIONS_RUNBOOK.md`; `riesgos.txt` migrado y borrado.
+  - Fase 7: `raspberrypi/tools/{export_model.py,benchmark.py}`, `docs/MODEL.md`. En Windows el benchmark real **no corrió** (ver quirks §8: Smart App Control bloquea `torch`); quedó `ncnn@416` documentado como supuesto del plan, no medición.
+  - Fase 8: `.gitignore` reescrito, `.pre-commit-config.yaml`, `pyproject.toml`, `.github/workflows/ci.yml`. Validado localmente: backend 70/70, frontend lint/typecheck/test/build/e2e en verde (JS inicial 141 KB gzip, presupuesto 180 KB), gitleaks sin hallazgos. `docker build .` no se pudo validar local (sin Docker Desktop activo) — queda pendiente de confirmar en un run real de GitHub Actions.
+  - Fase 9: `README.md`, `ARCHITECTURE.md`, `DATA_MODEL.md`, `DATA_LAKE.md`, `CLOUD_DEPLOYMENT.md`, `SECURITY.md`, `PRIVACY.md`, `COSTS.md`, `API.md`, 8 ADRs, `CHANGELOG.md` — todos verificados contra el código real, con las secciones de costos/latencia/checklist de seguridad marcadas explícitamente como "estimado, pendiente de Fase 10".
+  - Bug real encontrado y corregido durante Fase 6: `install.sh` paso 8 abortaba toda la instalación (`set -e`) si el primer arranque del servicio fallaba — ahora tolera el fallo inicial (commit `0eb919d`).
+- **Raspberry Pi física instalada y funcionando de punta a punta** (host `edge-vizia-sac`, usuario `vizia`): `install.sh` corrido completo (12/12 pasos), modelo `epp_yolov8n.pt` exportado a NCNN en la propia Pi (ahí sí funciona `torch`/`pnnx`, a diferencia de Windows) y copiado a `/var/lib/epp-edge/models/best_ncnn_model`, key nueva de `raspberry-pi-worker` copiada a `/etc/epp-edge/gcp-key.json`, `edge.env` completado. Servicio `epp-edge` activo, cámara USB detectada, `desired_state=running`, **streaming en vivo confirmado funcionando** desde el dashboard (`/En vivo` → `admin@viz-ia.com`).
+- Como la Pi ya está subiendo eventos reales, **ya se puede reintentar `06_bigquery.sh`** (antes fallaba porque el bucket del lake estaba vacío) y correr `reconcile_lake.py` — no se ha hecho todavía esta sesión.
 
-### Cambios sin commitear al cierre de esta sesión
-- `infra/deploy_cloud.sh`: se quitó `--remove-env-vars=UPLINK_TOKEN` (gcloud no permite combinarlo con `--set-env-vars`, que ya reemplaza todo). Hay que commitearlo.
-- Este archivo (`docs/HANDOFF_CLAUDE_CODE.md`).
-- Ya existían sin commitear (dejar): `front-end/core/config.py`, `gcp/orchestrator_main.py`.
+### Próximo foco explícito del usuario
+Costos y optimización (revisar Billing, confirmar que el streaming bajo demanda no está generando cargos inesperados, y afinar antes de seguir con limpieza de GCP).
 
 ### Pendiente (en orden)
-1. Commit del fix de `deploy_cloud.sh` y de este handoff.
-2. Decidir con el usuario si el servicio queda público o se retira `allUsers` de `roles/run.invoker` (el usuario pidió "pausear"; se le dio el comando para quitarlo, no consta que lo haya ejecutado — verificar con `gcloud run services get-iam-policy`).
-3. `07_pubsub_teardown.sh`: antes verificar que `dbraspberry/detecciones_por_tiempo` esté vacía; requiere env `EVENTARC_TRIGGERS` y `PUBSUB_SUBSCRIPTIONS`; nunca `--force`; parar ante avisos de dependencias.
-4. `08_cleanup_billing.sh`: política de limpieza de Artifact Registry, lifecycle de fuentes de Cloud Build, SA `cloud-build-deployer`; borrar imagen `build-test:phase1` si sigue; `REMOVE_COMPUTE_EDITOR=1` solo si el deploy con build SA funciona.
-5. Alerta de presupuesto: el usuario añade su correo como destinatario en Billing → Manage access; monto según `docs/COSTS.md`.
-6. Borrar `gcp/` y `front-end/` y verificar criterios de Fase 4.
-7. Fase 5: verificar conteo en `raw_events`, `reconcile_lake`, consulta por `event_id`; reintentar `06_bigquery.sh`.
-8. Fase 6: scripts de despliegue en la Pi (`install.sh`, `epp-edge.service`, `update.sh`, runbook). Lo que dependa de hardware requiere la Pi; el usuario debe copiar el device-token a `edge.env` en la Pi.
-9. Fase 7: `export_model`, benchmark, `docs/MODEL.md`; reescritura completa de `.gitignore`.
-10. Fase 8: CI, gitleaks, pre-commit, ruff (ignorar B008); pedir al usuario activar GitHub Secret scanning + Push protection.
-11. Fase 9: documentación (README, ARCHITECTURE, DATA_MODEL, DATA_LAKE, EDGE_DEPLOYMENT, CLOUD_DEPLOYMENT, SECURITY, PRIVACY, COSTS, MODEL, OPERATIONS_RUNBOOK, DESIGN_SYSTEM, API, `frontend/README`, ADRs 0001–0008, CHANGELOG); borrar `riesgos.txt`.
-12. Fase 10: verificación extremo a extremo, cierre de costos (revisar Billing al día siguiente de las pruebas), checklist de seguridad, y abrir el PR (sin merge).
-13. Corregir la redacción de criterios que mencionen `capture.uri`/`capture.thumb_uri`.
-14. Opcional ofrecido: revisar Cloud Logging por uso indebido de la key vieja (si se omite, nota en SECURITY.md).
+1. `07_pubsub_teardown.sh`: antes verificar que `dbraspberry/detecciones_por_tiempo` esté vacía; requiere env `EVENTARC_TRIGGERS` y `PUBSUB_SUBSCRIPTIONS`; nunca `--force`; parar ante avisos de dependencias.
+2. `08_cleanup_billing.sh`: política de limpieza de Artifact Registry, lifecycle de fuentes de Cloud Build, SA `cloud-build-deployer`; borrar imagen `build-test:phase1` si sigue; `REMOVE_COMPUTE_EDITOR=1` solo si el deploy con build SA funciona.
+3. Alerta de presupuesto: el usuario añade su correo como destinatario en Billing → Manage access; monto según `docs/COSTS.md`. **Es justo el foco actual del usuario** — probablemente lo primero a retomar.
+4. Revocar la key vieja `b78e4fdf...` de `raspberry-pi-worker` (con OK del usuario) una vez confirmado que la nueva sigue funcionando estable.
+5. Borrar `gcp/` y `front-end/` (código viejo) y verificar los criterios de aceptación de la Fase 4.
+6. Fase 5: reintentar `06_bigquery.sh` (el bucket ya no está vacío), correr `reconcile_lake.py`, verificar una consulta por `event_id`.
+7. Fase 7 (opcional): correr `benchmark.py` en la Pi real para tener números reales de latencia/FPS y actualizar `docs/MODEL.md` (ahora sí es posible, Windows era el único bloqueo).
+8. Pedir al usuario activar GitHub Secret scanning + Push protection (acción manual, Fase 8).
+9. Confirmar un run real de GitHub Actions (especialmente el job `image`, no validado localmente).
+10. Fase 10: verificación extremo a extremo, cierre de costos (revisar Billing al día siguiente de pruebas con streaming real), checklist de seguridad final, y abrir el PR hacia `main` (sin merge).
+11. Corregir la redacción de criterios que mencionen `capture.uri`/`capture.thumb_uri` en `docs/PLAN_REMEDIACION.md`.
+12. Opcional ofrecido: revisar Cloud Logging por uso indebido de las keys viejas (si se omite, nota en SECURITY.md).
 
 ## 8. Quirks del entorno (aprendidos)
 - Windows 11, Git Bash y PowerShell. Python local 3.13 (la imagen usa 3.12). Sin Docker, WSL ni admin: se usa Cloud Build.
@@ -103,10 +99,20 @@ Rama de trabajo: `remediacion/auditoria-2026-10` → al final PR hacia `main` (*
 - El **clasificador de modo auto** bloquea muchas mutaciones de gcloud, `rm` y comandos compuestos (p. ej. deploy con `--allow-unauthenticated` = "Security Weaken"). No esquivarlo: pedir al usuario que lo ejecute con `! comando` en el prompt. Los comandos largos de gcloud pasan a segundo plano tras 120 s; usar `run_in_background` y Monitor.
 - Los scripts de infra deben ejecutarse desde la raíz del repo (`--source=.`), no desde `infra/`.
 - `04_firestore.sh`: `gcloud firestore indexes composite create` espera a que el índice quede READY (minutos); es idempotente.
-- `.gitignore` histórico ignora `*.json` y `*.yml`: hay excepciones explícitas (`frontend/package.json`, `tsconfig*.json`, `infra/policies/*.json`, `docs/**/*.png`). La reescritura completa es Fase 7/8.
 - `.gitattributes` fuerza LF en `*.sh`. Aparecen avisos de CRLF en Windows: normales.
 - Capturas de pantalla de Chrome a veces dan timeout: usar `get_page_text`/`read_page`/zoom.
 - Dependencias de la Pi (`ultralytics==8.4.175`, `ncnn==1.0.20260526`) no validadas en aarch64: rehacer `pip freeze` en la Pi real.
+
+### Laptop nueva (clon fresco, 2026-10-11)
+- Clonar con `--branch remediacion/auditoria-2026-10 --single-branch` deja sin `origin/main` local. Los subagentes con `isolation: worktree` fallan ("Failed to resolve base branch origin/main") hasta hacer `git fetch origin main:refs/remotes/origin/main`.
+- `git worktree remove` puede fallar en Windows por rutas largas (p. ej. caché de `node_modules`/Playwright dentro del worktree): error "Filename too long". Se resuelve vaciando con `robocopy <carpeta_vacía> <destino> /MIR` antes de borrar la carpeta.
+- **Windows Smart App Control** bloquea DLLs no firmadas de `torch` (`torch_python.dll`, `shm.dll`, error `WinError 4551`) y a veces las de `numpy.random` recién instaladas por pip (afecta 11 tests de `raspberrypi/tests`). No tiene solución sin ser administrador; no bloquea Linux/la Pi real ni CI (GitHub Actions). Por eso la Fase 7 (export/benchmark NCNN) no se pudo validar en esta laptop y se hizo en la Pi real.
+- `gcloud` no estaba instalado: `winget install --id Google.CloudSDK -e`. Tras instalar, el PATH no se refresca en sesiones/terminales ya abiertas (ni en la del usuario ni en la del agente) — hay que abrir una terminal nueva o usar la ruta completa `"$env:LOCALAPPDATA\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd"` esa primera vez.
+- Exportar a NCNN con Ultralytics necesita el paquete `pnnx` además de `ultralytics`/`torch`/`ncnn` (no está en `raspberrypi/requirements.txt`). En la Pi: `sudo /opt/epp-edge/venv/bin/pip install pnnx` lo resuelve.
+- El nombre de la carpeta NCNN exportada sale del nombre del `.pt` (`<stem>_ncnn_model/`), no siempre `best_ncnn_model` — si el archivo no se llama `best.pt` (p. ej. `epp_yolov8n.pt`), hay que copiarla/renombrarla a mano a `/var/lib/epp-edge/models/best_ncnn_model`.
+- La terminal SSH de la Pi (usuario `vizia`, host `edge-vizia-sac`) tenía bracketed-paste roto: pegar comandos multilínea mostraba literalmente `^[[200~`. Fix: `bind 'set enable-bracketed-paste off'` (agregarlo a `~/.bashrc` para que persista).
+- Al editar `edge.env` a mano con `nano`, es fácil duplicar el prefijo (queda `ORCHESTRATOR_HOST=ORCHESTRATOR_HOST=...`) si no se borra la línea completa antes de escribir el valor nuevo — causa `[Errno -2] Name or service not known` en el streaming. Mejor usar `sed -i 's/^VAR=.*/VAR=valor/'` para reemplazar la línea entera.
+- picamera2 puede fallar una vez con `Camera in Configured state trying acquire()` justo después de un restart rápido del servicio (handle no liberado a tiempo); el fallback automático a `usb:0` de `capture.py` (`auto`) lo resuelve solo en el mismo intento — no es un bug.
 
 ## 9. Trailers de commit y PR
 Commits terminan con:
@@ -116,11 +122,11 @@ Claude-Session: https://claude.ai/code/session_01U5wUR7m2Zh6FDCPycv4SUM
 ```
 La descripción del PR termina con `🤖 Generated with [Claude Code](https://claude.com/claude-code)` y el link de sesión.
 
-## 10. Commits ya hechos en la rama (más antiguo → más reciente)
-`1af8516`, `aca9b0c`, `8f0c8f2`, `3d56ad2`, `7fc1147`, `41424e8`, `5f6d7c0`, `b4d2e47`, `41d89c3`, `9c8b2ac`, `5a71d2a`, `0f6ffbf`, `0c522e7`, `34ff6c5`, `ef1c670`, `a3b6c43`, `a4dd4f2`, `e492a40`, `cdd3f16`, `50954ce`, `4398625`, `a469408`, `02db8d6`, `140211f`, `b215645`, `a1f62e0`, `b1d799a`, `09647c6`, `ec225e9`, `05ac829`, `b72f3f6`, `432df40`, `e601f1d`, `d0047bf`, `2cfeb34`, `243a094`, `d32aba2`, `a4f5e2c`, `d811073`, `44f02ae`, `02b8129`, `2d5697f`, `61a36a8`, `a17ed50`, `fef4f6e`, `27f5d45`.
+## 10. Commits en la rama
+Ya son demasiados para listar a mano (>70). Usar `git log --oneline origin/remediacion/auditoria-2026-10` para ver el historial completo. HEAD al cierre de esta sesión: `0eb919d`.
 
-## 11. Cómo retomar en la otra laptop
-1. `git clone` del repo y `git checkout remediacion/auditoria-2026-10` (si esta rama no se subió, pedir al usuario hacer `git push` de la rama primero).
-2. Instalar: gcloud CLI, Git Bash, Python 3.12/3.13, Node 24 + pnpm. `gcloud auth login` y `gcloud auth application-default login` con la cuenta del proyecto; `gcloud config set project epp-detection-v1`.
-3. Leer este archivo y `docs/PLAN_REMEDIACION.md`; ejecutar `git status` y `git log --oneline -5` para confirmar el estado.
-4. Continuar por la sección 7 → "Pendiente", pidiendo OK explícito antes de cada mutación en GCP.
+## 11. Cómo retomar (en esta laptop u otra)
+1. `git clone --branch remediacion/auditoria-2026-10 --single-branch <url>` (o `git checkout remediacion/auditoria-2026-10` si el repo ya existe). Si se usan subagentes con `isolation: worktree`, hacer también `git fetch origin main:refs/remotes/origin/main` (ver quirks §8).
+2. Instalar: gcloud CLI (en Windows sin admin, `winget install --id Google.CloudSDK -e` funciona; abrir terminal nueva después), Git Bash, Python 3.12/3.13, Node 24 + pnpm. `gcloud auth login` y `gcloud auth application-default login` con la cuenta del proyecto; `gcloud config set project epp-detection-v1`.
+3. Leer este archivo y `docs/PLAN_REMEDIACION.md`; ejecutar `git status` y `git log --oneline -5` para confirmar el estado real (puede diferir de lo escrito aquí si pasó tiempo).
+4. Continuar por la sección 7 → "Pendiente", pidiendo OK explícito antes de cada mutación en GCP. El foco actual del usuario es costos/optimización — probablemente lo primero a retomar es la alerta de presupuesto (pendiente 3) y revisar Billing.
