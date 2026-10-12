@@ -1,6 +1,6 @@
 # EPP Monitor — frontend
 
-**Para quién es:** quien desarrolle, pruebe o compile la SPA. **Última verificación:** 2026-10-10.
+**Para quién es:** quien desarrolle, pruebe o compile la SPA. **Última verificación:** 2026-10-11.
 
 React 19 + TypeScript estricto + Vite. Habla únicamente con la API de `backend/` (REST + WebSocket,
 mismo origen: sin CORS). Reglas de diseño en [`docs/DESIGN_SYSTEM.md`](../docs/DESIGN_SYSTEM.md).
