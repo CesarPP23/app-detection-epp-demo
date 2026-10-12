@@ -47,3 +47,6 @@ node_modules/
 frontend/dist/
 playwright-report/
 test-results/
+
+# Herramientas locales (Claude Code)
+.claude/
