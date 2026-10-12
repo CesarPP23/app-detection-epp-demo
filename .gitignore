@@ -1,88 +1,49 @@
-# Ignorar archivos de entorno virtual
+# Entornos y secretos
 venv/
+.venv/
 .env
-.env.example
-notebooks/
+.env.*
+*.env
+!*.env.template
+*key*.json
+service_account*.json
+credentials*.json
+client_secret*.json
+*.pem
+*.p12
 
-# Ignorar archivos compilados de Python
+# Artefactos
 __pycache__/
 *.py[cod]
-*$py.class
-*.ipynb
-# Ignorar archivos temporales y de sistema
-*.swp
-*.bak
-*.tmp
-.DS_Store
-
-# Ignorar imágenes comunes
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.bmp
-*.tiff
-*.webp
-*.svg
-# Ignorar archivos de audio y video
-*.mp3
-*.wav 
-*.mp4
-*.avi
-# Ignorar archivos de modelos
-*.pt
-#Json
-*.json
-
-# Ignorar archivos de log
-*.log
-
-# Ignorar archivos de librerías grandes
-*.dll
-*.lib
-*.pyd
-
-# Ignorar archivos database
-*.db
-# Ignorar archivos de configuración de IDEs
-.idea/
-#Ignorar archivos log
-*.log
-#Ignorar archivos dockerfile
-*.dockerfile
-*.yml
-
 *.zip
 *.tar.gz
 *.7z
+*.pt
+*.onnx
+*_ncnn_model/
+*.db
+*.db-wal
+*.db-shm
+*.log
+logs/
 
-# Backend / frontend
-.venv-backend/
-node_modules/
-frontend/dist/
-playwright-report/
-test-results/
-
-# Excepciones necesarias para el frontend (la reescritura completa va en la Fase 8)
-.venv-edge/
-.venv-edge-b/
-
-# Frontend: configuración y contrato versionados; artefactos fuera
-!frontend/package.json
-!frontend/tsconfig*.json
-!frontend/openapi.json
-!frontend/.prettierrc
-!frontend/.nvmrc
-!frontend/.npmrc
-node_modules/
-frontend/dist/
-playwright-report/
-test-results/
-
-# Capturas de documentacion (la reescritura completa va en la Fase 8)
+# Medios
+*.mp4
+*.avi
+*.jpg
+*.jpeg
+*.png
 !docs/**/*.png
 
-# Infra: políticas y configuración versionadas (las credenciales siguen cubiertas por *key*.json)
-!infra/policies/*.json
-!infra/**/*.sql
-!infra/firestore.rules
+# Notebooks e IDE
+notebooks/
+*.ipynb
+.idea/
+.vscode/
+.DS_Store
+
+# Frontend y artefactos de pruebas e2e
+node_modules/
+frontend/dist/
+playwright-report/
+test-results/
