@@ -50,3 +50,11 @@ test-results/
 
 # Herramientas locales (Claude Code)
 .claude/
+
+# Nodo con pose (edge_pose/): credenciales, datos locales y modelos (se distribuyen aparte)
+edge_pose/secrets/
+edge_pose/data/
+edge_pose/models/
+training/runs/
+training/data/
+training/weights/

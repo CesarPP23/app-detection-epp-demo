@@ -9,6 +9,12 @@ export const CLASS_LABELS: Record<string, string> = {
   lab_coat: "Mandil",
   face_mask: "Mascarilla",
   latex_gloves: "Guantes de látex",
+  // Nodo con pose (edge_pose/): clases del modelo propio y veredicto por episodio
+  Gorra: "Cofia",
+  Guante: "Guantes",
+  Mascarilla: "Mascarilla",
+  episodio_conforme: "Cumple EPP",
+  episodio_no_conforme: "No cumple EPP",
 };
 
 export const OTHER_COLOR = "var(--class-other)";

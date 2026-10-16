@@ -1,0 +1,12 @@
+# Entrenamiento / evaluación / exportación (laptop con GPU NVIDIA)
+# torch se instala aparte con el índice CUDA (ver README):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+ultralytics>=8.3,<9
+onnx>=1.16
+onnxslim
+onnxruntime
+ncnn
+pandas
+matplotlib
+seaborn
+pyyaml

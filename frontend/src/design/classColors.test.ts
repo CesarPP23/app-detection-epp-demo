@@ -35,6 +35,8 @@ describe("classColors", () => {
   it("etiquetas en español", () => {
     expect(classLabel("latex_gloves")).toBe("Guantes de látex");
     expect(classLabel("safety_boots")).toBe("safety boots");
+    expect(classLabel("Gorra")).toBe("Cofia");
+    expect(classLabel("episodio_no_conforme")).toBe("No cumple EPP");
     expect(isFixedClass("hairnet")).toBe(true);
     expect(isFixedClass("boots")).toBe(false);
   });

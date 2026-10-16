@@ -126,6 +126,7 @@ Detalle de cada variable de entorno, protocolo de video y despliegue real en GCP
 | [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) | Principios, tokens, componentes, accesibilidad |
 | [`frontend/README.md`](frontend/README.md) | Cómo correr, probar y compilar la SPA |
 | [`docs/adr/`](docs/adr/) | Decisiones de arquitectura (formato MADR) |
+| [`docs/INTEGRACION_NODO_POSE.md`](docs/INTEGRACION_NODO_POSE.md) | Nodo de la tesis con pose y episodios (`edge_pose/`) integrado con esta nube |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historial de versiones |
 
 ## Trabajo futuro
