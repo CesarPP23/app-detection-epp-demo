@@ -202,7 +202,11 @@ class EPPStateMachine:
             return
         self._last_person_check = now
         self.stats["inferencias_pose"] += 1
-        found, persons = self.pose.has_person(frame)
+        try:
+            _found, persons = self.pose.has_person(frame)
+        except Exception:  # noqa: BLE001 - frame corrupto, error del runtime NCNN, etc.
+            log.exception("Fallo de inferencia de pose en PERSON_CHECK; se trata como 'sin persona'")
+            persons = []
         persons = [p for p in persons if self._in_roi(p)]
         self._last_persons = persons
         self._emit(frame, [], persons)
@@ -224,6 +228,20 @@ class EPPStateMachine:
         self._fps_ema = 0.9 * self._fps_ema + 0.1 * (1.0 / max(dt, 1e-3)) if self._fps_ema else 1.0 / max(dt, 1e-3)
         self._cycle += 1
 
+        try:
+            self._active_cycle(frame, now, ep)
+        except Exception:  # noqa: BLE001 - frame corrupto, error del runtime NCNN, etc.
+            log.exception("Fallo de inferencia en el ciclo %d; se descarta este frame y se sigue",
+                          self._cycle)
+
+        if now - ep.last_person_ts >= self.absence_timeout:
+            self._close_episode(now)
+            self._set_state(State.IDLE)
+
+    def _active_cycle(self, frame: np.ndarray, now: float, ep: Episode) -> None:
+        """Un ciclo de pose + EPP + colocación, aislado en su propio método: si una inferencia falla
+        (frame corrupto, error del runtime NCNN), `_step_active` lo registra y salta el ciclo en vez
+        de tirar abajo todo el proceso (mismo criterio que `raspberrypi/epp_edge/inference.py`)."""
         # 1) personas + ids (pose sobre el frame completo, cada `pose_every` ciclos)
         if self._cycle % self.pose_every == 0 or not self._last_persons:
             self.stats["inferencias_pose"] += 1
@@ -309,10 +327,6 @@ class EPPStateMachine:
             self.storage.add_sample(ep.id, utc_now_iso(), dict(counts), len(persons),
                                     [[d.label, round(d.conf, 3), d.x1, d.y1, d.x2, d.y2] for d in dets],
                                     estados={f"P{p.track_id}": p.status for p in persons})
-
-        if now - ep.last_person_ts >= self.absence_timeout:
-            self._close_episode(now)
-            self._set_state(State.IDLE)
 
     # -------------------------------------------------------------- episodios
     def _open_episode(self, now: float, n_persons: int) -> None:
