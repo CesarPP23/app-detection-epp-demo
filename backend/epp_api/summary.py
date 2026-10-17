@@ -15,7 +15,7 @@ def sample_kpis(events: list[dict]) -> dict:
         return {"n": 0, "avg_conf": None, "coverage": None}
     avg = sum(e.get("confianza_promedio") or 0.0 for e in events) / n
     ok = sum(1 for e in events if (e.get("capture") or {}).get("status") == "ok")
-    return {"n": n, "avg_conf": avg, "coverage": ok / n * 100}
+    return {"n": n, "avg_conf": avg, "coverage": ok / n}
 
 
 def _top(counts: Counter) -> tuple[str | None, int]:
