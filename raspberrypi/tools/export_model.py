@@ -64,7 +64,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
     except Exception as e:  # noqa: BLE001 - ultralytics/pnnx/onnx lanzan excepciones heterogéneas
-        print(f"Falló la exportación de {args.weights} a {args.format} (imgsz={args.imgsz}): {e}", file=sys.stderr)
+        print(
+            f"Falló la exportación de {args.weights} a {args.format} (imgsz={args.imgsz}): {e}",
+            file=sys.stderr,
+        )
         return 1
 
     print(f"Exportado: {out}")

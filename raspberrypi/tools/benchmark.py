@@ -66,7 +66,9 @@ def generate_synthetic_clip(
     path.parent.mkdir(parents=True, exist_ok=True)
     writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
     if not writer.isOpened():
-        raise RuntimeError(f"No se pudo abrir VideoWriter para {path} (¿falta el backend de video de OpenCV?)")
+        raise RuntimeError(
+            f"No se pudo abrir VideoWriter para {path} (¿falta el backend de video de OpenCV?)"
+        )
     n_frames = max(1, int(fps * seconds))
     yy, xx = np.meshgrid(np.arange(height), np.arange(width), indexing="ij")
     base_texture = ((xx * 13 + yy * 7 + seed * 101) % 37).astype(np.uint8)
@@ -307,16 +309,28 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--weights", type=Path, default=Path("torch/best.pt"))
     ap.add_argument("--formats", default=",".join(DEFAULT_FORMATS), help="lista separada por comas: pt,ncnn")
-    ap.add_argument("--sizes", default=",".join(str(s) for s in DEFAULT_SIZES), help="lista separada por comas")
+    ap.add_argument(
+        "--sizes", default=",".join(str(s) for s in DEFAULT_SIZES), help="lista separada por comas"
+    )
     ap.add_argument("--warmup", type=int, default=10)
     ap.add_argument("--iters", type=int, default=100)
     ap.add_argument("--video", type=Path, default=Path("media/bench_synthetic.mp4"))
-    ap.add_argument("--regenerate-video", action="store_true", help="regenera el clip sintético aunque ya exista")
-    ap.add_argument("--export-root", type=Path, default=None, help="default: <carpeta de --weights>/exports")
-    ap.add_argument("--no-auto-export", action="store_true", help="no exportar a ncnn automáticamente si falta")
-    ap.add_argument("--data", type=Path, default=None, help="data.yaml de validación para mAP50-95 (opcional)")
+    ap.add_argument(
+        "--regenerate-video", action="store_true", help="regenera el clip sintético aunque ya exista"
+    )
+    ap.add_argument(
+        "--export-root", type=Path, default=None, help="default: <carpeta de --weights>/exports"
+    )
+    ap.add_argument(
+        "--no-auto-export", action="store_true", help="no exportar a ncnn automáticamente si falta"
+    )
+    ap.add_argument(
+        "--data", type=Path, default=None, help="data.yaml de validación para mAP50-95 (opcional)"
+    )
     ap.add_argument("--inference-fps", type=float, default=5.0, help="para el umbral p95 < 0.7/INFERENCE_FPS")
-    ap.add_argument("--max-map-drop", type=float, default=2.0, help="puntos porcentuales de mAP50-95 tolerados")
+    ap.add_argument(
+        "--max-map-drop", type=float, default=2.0, help="puntos porcentuales de mAP50-95 tolerados"
+    )
     ap.add_argument("--baseline", default="pt@640")
     ap.add_argument("--json-out", type=Path, default=None)
     args = ap.parse_args(argv)
@@ -330,7 +344,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if not args.video.exists() or args.regenerate_video:
-        print(f"Generando clip sintético en {args.video} (solo para latencia/FPS, no representa escenas reales)…")
+        print(
+            f"Generando clip sintético en {args.video} "
+            "(solo para latencia/FPS, no representa escenas reales)…"
+        )
         generate_synthetic_clip(args.video)
 
     needed = args.warmup + args.iters
