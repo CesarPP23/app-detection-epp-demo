@@ -1,0 +1,24 @@
+[Unit]
+Description=EPP Edge - deteccion de EPP con vision artificial (Raspberry Pi)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+WatchdogSec=120
+User=%i
+WorkingDirectory=/home/%i/epp-edge
+ExecStart=/home/%i/epp-edge/.venv/bin/python -m epp_edge.main
+Restart=always
+RestartSec=5
+# Evita que ultralytics intente escribir configuración fuera de la carpeta
+Environment=YOLO_CONFIG_DIR=/home/%i/epp-edge/data/.yolo
+Environment=OMP_NUM_THREADS=4
+Environment=PYTHONUNBUFFERED=1
+# WatchdogSec: si el bucle principal deja de enviar WATCHDOG=1 durante 120 s, systemd reinicia el servicio
+TimeoutStopSec=20
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target

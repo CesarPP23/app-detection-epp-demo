@@ -1,0 +1,38 @@
+# Dependencias del borde (Raspberry Pi OS 64-bit, Python 3.11+).
+# Versiones exactas congeladas con `pip freeze` en el venv de desarrollo (Windows, Python 3.13).
+# TODO al instalar en la Pi real: ejecutar `pip freeze` allí y reemplazar este archivo; en
+# particular numpy debe tener la misma versión MAYOR que el numpy de apt (python3-picamera2),
+# y ultralytics arrastra torch/torchvision, que en aarch64 se resuelven allí.
+# picamera2 NO va aquí: se instala con apt y el venv usa --system-site-packages.
+ultralytics==8.4.175        # versión actual de PyPI al 2026-10-10 (sin validar en aarch64)
+ncnn==1.0.20260526          # idem
+opencv-python-headless==5.0.0.93
+numpy==2.5.4
+websockets==17.2
+python-dotenv==1.2.4
+google-cloud-firestore==2.34.1
+google-cloud-storage==3.17.0
+google-api-core==2.42.0
+google-auth==2.61.0
+google-cloud-core==2.8.0
+google-crc32c==1.9.0
+google-resumable-media==2.11.0
+googleapis-common-protos==1.75.5
+grpcio==1.84.0
+grpcio-status==1.84.0
+proto-plus==1.29.0
+protobuf==7.36.2
+pyasn1==0.6.4
+pyasn1_modules==0.4.2
+requests==2.34.2
+certifi==2026.7.22
+charset-normalizer==3.5.2
+idna==3.20
+urllib3==2.8.0
+cryptography==50.0.2
+cffi==2.1.1
+pycparser==3.11
+packaging==26.3
+typing_extensions==4.16.0
+opentelemetry-api==1.45.1
+tzdata==2026.5

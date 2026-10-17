@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+/* Tokens 3.8. El tema por defecto es CLARO (U8) sin importar la preferencia del sistema; el
+   oscuro se aplica solo con [data-theme="dark"] cuando el usuario lo elige. */
+:root {
+  --page: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: rgba(11, 11, 11, 0.1);
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --accent: #2a78d6;
+  /* Variantes AA para texto (3.12): --text-muted y --accent no llegan a 4.5:1 como texto. */
+  --text-muted-aa: #6b6a65;
+  --accent-text: #1f6bc4;
+  --accent-solid: #1f6bc4;
+  --critical-text: #c23030;
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+  --delta-good-text: #006300;
+  --class-hairnet: #2a78d6;
+  --class-lab_coat: #eb6834;
+  --class-face_mask: #1baf7a;
+  --class-latex_gloves: #eda100;
+  --class-other: #898781;
+  --overlay: rgba(11, 11, 11, 0.45);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --surface-2: #232322;
+  --border: rgba(255, 255, 255, 0.1);
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --accent: #3987e5;
+  --text-muted-aa: #a3a19b;
+  --accent-text: #6aa5f0;
+  --accent-solid: #2570cc;
+  --critical-text: #f27878;
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+  --delta-good-text: #0ca30c;
+  --class-hairnet: #3987e5;
+  --class-lab_coat: #d95926;
+  --class-face_mask: #199e70;
+  --class-latex_gloves: #c98500;
+  --class-other: #898781;
+  --overlay: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-ink: var(--text-primary);
+  --color-ink-2: var(--text-secondary);
+  --color-ink-3: var(--text-muted-aa);
+  --color-grid: var(--grid);
+  --color-axis: var(--axis);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-solid: var(--accent-solid);
+  --color-good: var(--status-good);
+  --color-warning: var(--status-warning);
+  --color-serious: var(--status-serious);
+  --color-critical: var(--status-critical);
+  --color-critical-text: var(--critical-text);
+  --color-delta-good: var(--delta-good-text);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius-control: 6px;
+  --radius-card: 10px;
+  --radius-video: 14px;
+}
+
+html {
+  background: var(--page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--page);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+*,
+*::before,
+*::after {
+  border-color: var(--border);
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Foco visible de 2 px con --accent y desplazamiento de 2 px (3.12). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 100;
+  padding: 8px 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+@keyframes epp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.live-dot {
+  animation: epp-pulse 1.6s ease-in-out infinite;
+}
+@keyframes epp-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-1) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: epp-shimmer 1.4s linear infinite;
+  border-radius: var(--radius-control);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

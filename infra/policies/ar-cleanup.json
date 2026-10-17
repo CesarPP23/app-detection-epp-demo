@@ -1,0 +1,2 @@
+[{"name": "keep-last-3", "action": {"type": "Keep"}, "mostRecentVersions": {"keepCount": 3}},
+ {"name": "delete-old", "action": {"type": "Delete"}, "condition": {"olderThan": "30d"}}]

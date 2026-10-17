@@ -1,0 +1,22 @@
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+# Código viejo pendiente de borrar (ver docs/HANDOFF_CLAUDE_CODE.md) e infraestructura fuera
+# del alcance de esta fase: no se lintea ni se reformatea aquí.
+extend-exclude = ["front-end", "gcp", "infra"]
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+# B008: Depends()/Query()/etc. de FastAPI se usan como valor por defecto de parámetro a propósito.
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# S101 (uso de `assert`): es el idioma normal de pytest, no un riesgo en tests.
+"backend/tests/**.py" = ["S101"]
+"backend/conftest.py" = ["S101"]
+"raspberrypi/tests/**.py" = ["S101"]
+"raspberrypi/conftest.py" = ["S101"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"

@@ -1,0 +1,131 @@
+# Configuración del nodo de borde (Raspberry Pi 5) — Sistema de detección de EPP
+# Todas las rutas relativas se resuelven desde la carpeta epp_edge/.
+
+device:
+  id: "pi-envasado-01"          # identificador único del nodo
+  zona: "Zona de envasado"       # texto que se guarda en cada episodio
+  timezone: "America/Lima"
+
+camera:
+  source: 0                      # 0 = /dev/video0 (webcam USB). Ruta a .mp4 para pruebas. "rtsp://..." para IP cam.
+  width: 640
+  height: 480
+  fps: 15                        # fps que se pide a la cámara; el bucle IDLE muestrea menos
+  flip: false
+  loop_video: true               # solo aplica cuando source es un archivo de video (pruebas)
+  # Zona de interés (polígono en coordenadas normalizadas 0-1). Movimiento y personas fuera de ella se ignoran.
+  # Ejemplo para vigilar solo el puesto de llenado (mitad derecha del encuadre):
+  # roi: [[0.35, 0.05], [1.0, 0.05], [1.0, 1.0], [0.35, 1.0]]
+  roi: null
+  # Controles V4L2 opcionales para fijar la exposición y evitar oscilaciones del auto-exposure
+  # (valores dependen de la webcam; ver `v4l2-ctl -d /dev/video0 --list-ctrls`).
+  controls: {}                   # p. ej. {auto_exposure: 1, exposure: 250, gain: 8, brightness: 128}
+
+motion:                          # Etapa 0: detección de movimiento (MOG2), costo ~1 ms
+  sample_fps: 5                  # frames por segundo que se analizan en IDLE
+  min_area_ratio: 0.01           # fracción de la ROI (1 %) que debe cambiar para considerar movimiento
+  history: 300
+  var_threshold: 40
+  cooldown_s: 2.0                # tiempo sin movimiento para volver a IDLE profundo
+
+person:                          # Etapa 1: ¿hay una persona? + puntos clave (YOLOv8n-pose NCNN 320) + ByteTrack
+  model: "../models/pose_yolov8n_320_ncnn_model"
+  imgsz: 320
+  conf: 0.40
+  tracker: "bytetrack.yaml"      # ids estables por persona (requiere paquete `lap`)
+  check_interval_s: 0.5          # cada cuánto se corre en PERSON_CHECK mientras hay movimiento
+  confirm_frames: 2              # detecciones consecutivas para confirmar presencia
+  absence_timeout_s: 5.0         # segundos sin persona para cerrar el episodio (histéresis)
+  pose_every: 1                  # en ACTIVE, correr pose cada N ciclos de EPP (2 = mitad de costo)
+
+epp:                             # Etapa 2: detección de EPP (modelo propio, NCNN) + validación de colocación
+  model: "../models/epp_yolov8n_640_ncnn_model"
+  imgsz: 640
+  conf: 0.40                     # confianza alta: la detección se acepta en cualquier posición
+  conf_low: 0.25                 # confianza baja: solo se acepta si cae donde la pose la espera (guante junto a la muñeca, etc.)
+  iou: 0.5
+  classes: ["Gorra", "Guante", "Mascarilla"]
+  required: ["Gorra", "Guante", "Mascarilla"]   # EPP obligatorios en la zona
+  compliance_ratio: 0.60         # EPP usado correctamente en >= 60 % de los frames EVALUABLES de la persona
+  min_eval_frames: 5             # frames evaluables mínimos por EPP para emitir veredicto (si no, "no evaluable")
+  min_person_frames: 5           # personas con menos frames se ignoran (paso fugaz por la zona)
+  max_fps: 8                     # límite de ciclos de inferencia por segundo en ACTIVE (ahorra CPU/temperatura)
+  sample_every_s: 2.0            # cada cuánto se guarda una muestra por-frame en la BD local
+  crop:                          # inferencia por recorte alrededor de cada persona (la persona llena la entrada del modelo)
+    mode: alternate              # off | pose_only (solo refina la pose) | alternate (EPP: frame completo y recorte alternados,
+                                 # fusionando 2 ciclos) | always (EPP siempre sobre el recorte)
+    merge_age_s: 0.4             # antigüedad máxima de las detecciones del ciclo anterior que se fusionan (alternate)
+    expand: 1.35                 # el recorte es un cuadrado 1,35× la caja de la persona
+    min_size: 320                # lado mínimo del recorte en píxeles
+    max_persons: 2               # con más personas se vuelve a inferencia sobre el frame completo
+    when_person_height_below: 0.75   # solo recortar si la persona ocupa menos del 75 % de la altura del frame
+
+evidence:
+  clip_seconds: 10               # 0 = desactivado. Guarda un MP4 con los últimos N s anotados del episodio
+  clip_fps: 4
+  only_noncompliant: true        # solo para episodios que incumplen
+
+alerts:
+  enabled: false                 # true para activar alertas inmediatas al cerrar un incumplimiento
+  only_noncompliant: true
+  telegram:
+    bot_token_file: "../secrets/telegram_token.txt"   # token del bot (crear con @BotFather)
+    chat_id: ""                                        # id del chat/grupo
+  webhook_url: ""                # POST JSON opcional (p. ej. Google Chat, Make, n8n)
+  gpio_pin: null                 # p. ej. 17 -> LED/buzzer en GPIO17 parpadea gpio_seconds
+  gpio_seconds: 10
+
+privacy:
+  blur_faces: false              # difumina la región de la cabeza en snapshots/stream (usa la caja de Gorra/Mascarilla)
+
+storage:
+  db_path: "../data/epp_edge.sqlite"
+  snapshots_dir: "../data/snapshots"
+  keep_days: 30                  # retención local de snapshots/clips
+  snapshot_jpeg_quality: 80
+
+local_server:                    # visualización en LAN sin internet
+  enabled: true
+  host: "0.0.0.0"
+  port: 8080
+  stream_fps: 5
+  stream_jpeg_quality: 70
+
+# Nube 2.0.0 (repositorio app-detection-epp-demo): lago de datos + Firestore + control remoto + video bajo demanda.
+cloud_v2:
+  enabled: true
+  project_id: "epp-detection-v1"
+  detections_database: "dbraspberry"      # eventos (episodios) y daily_stats
+  control_database: "(default)"            # device_control, device_health
+  lake_bucket: "epp-detection-v1-lake"
+  orchestrator_host: "orchestrator-service-XXXXXXXXXXXX.us-central1.run.app"   # host de Cloud Run, sin https://
+  credentials_file: "../secrets/gcp-key.json"     # clave de la cuenta raspberry-pi-worker (no se versiona)
+  device_token_file: "../secrets/device_token.txt"  # DEVICE_TOKEN de Secret Manager (no se versiona)
+  site_timezone: "America/Lima"
+  sync_interval_s: 5
+  heartbeat_s: 300
+  control_safety_poll_s: 300
+  default_desired_state: "running"
+  live_stream: true
+  stream_fps: 8
+  stream_width: 640
+  stream_jpeg_quality: 60
+
+# Nube del prototipo (API epp-api). Modo legado: se usa solo si cloud_v2 está desactivado.
+cloud:
+  enabled: false
+  api_url: "https://epp-api-XXXXXXXX-uc.a.run.app"    # se rellena tras el despliegue en Cloud Run
+  api_key_file: "../secrets/api_key.txt"               # contiene la API key (no se versiona)
+  sync_interval_s: 10            # cada cuánto se intenta vaciar la cola local
+  live_stream: true              # enviar frames anotados al relay (solo en ACTIVE)
+  live_fps: 4
+  live_jpeg_quality: 65
+  live_width: 640
+  upload_snapshots: true
+  request_timeout_s: 10
+
+logging:
+  level: "INFO"
+  file: "../data/epp_edge.log"
+  max_mb: 5
+  backups: 3

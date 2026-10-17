@@ -1,0 +1,16 @@
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.0
+    hooks:
+      # Alcance limitado a backend/ y raspberrypi/: front-end/, gcp/ e infra/ son código
+      # viejo o fuera del alcance de esta fase (no se tocan aquí).
+      - id: ruff
+        args: [--fix]
+        files: ^(backend|raspberrypi)/.*\.py$
+      - id: ruff-format
+        files: ^(backend|raspberrypi)/.*\.py$

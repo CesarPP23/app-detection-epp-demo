@@ -1,0 +1,13 @@
+# Dependencias del nodo de borde (Raspberry Pi 5, Raspberry Pi OS Bookworm 64-bit)
+# Instalar dentro de un venv creado con --system-site-packages (ver install.sh)
+ultralytics>=8.3,<9
+ncnn
+opencv-python-headless>=4.8
+numpy<2.3
+pyyaml
+requests
+websocket-client
+google-cloud-storage>=2.14     # nube 2.0.0: lago de datos
+google-cloud-firestore>=2.14   # nube 2.0.0: episodios, daily_stats, control y salud
+lap>=0.5.12
+psutil
