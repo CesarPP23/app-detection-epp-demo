@@ -110,6 +110,10 @@ cloud_v2:
   stream_fps: 8
   stream_width: 640
   stream_jpeg_quality: 60
+  training_capture:               # captura de fotos crudas para reentrenamiento, prendida desde el panel
+    fps: 1.0                      # fotos por segundo mientras una sesión está activa
+    jpeg_quality: 85
+    max_duration_s: 3600          # salvaguarda: cierra la sesión sola si nadie la detiene (1 hora)
 
 # Nube del prototipo (API epp-api). Modo legado: se usa solo si cloud_v2 está desactivado.
 cloud:
