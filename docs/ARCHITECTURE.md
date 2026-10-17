@@ -219,6 +219,17 @@ idempotente, mismo orden imágenes → sidecar → Firestore, mismo `if_generati
 que cambia es el contenido del payload (episodio en vez de sesión por clase — sección 1-bis de
 `docs/DATA_MODEL.md`).
 
+`edge_pose/` tiene además un hilo `CaptureWorker` (`training_capture.py`), hermano de
+`StreamWorker` pero para fotos en vez de video: mientras `control.should_capture()` sea verdadero
+(toggle persistente en `device_control`, sin lease — a diferencia de `should_stream()`), sube
+fotos **crudas** de la cámara (no las anotadas de `frames`/`FrameBuffer`) a
+`raw/training_captures/...` con el mismo `if_generation_match=0` del `Uploader`, y lleva el
+progreso en Firestore (`training_sessions/{session_id}`). No usa el outbox SQLite de episodios:
+perder una foto suelta de una sesión de cientos no amerita esa maquinaria, solo un reintento corto.
+Una salvaguarda local (`max_duration_s`, 1 hora por defecto) cierra la sesión sola si nadie la
+detiene desde el panel. Detalle completo y la justificación de cada decisión en
+`docs/DATA_LAKE.md` y `docs/DATA_MODEL.md`.
+
 ## 4. Modos de falla
 
 | Falla | Comportamiento |

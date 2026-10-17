@@ -16,8 +16,23 @@ raw/                                   # BRONCE: inmutable, escrito solo por la 
   images/device=<id>/dt=<YYYY-MM-DD>/<event_id>.jpg   # frame original sin anotar (no estructurado)
   thumbs/device=<id>/dt=<YYYY-MM-DD>/<event_id>.jpg   # miniatura anotada (la que muestra el dashboard)
   events/device=<id>/dt=<YYYY-MM-DD>/<event_id>.json  # sidecar NDJSON de 1 línea (estructurado, contrato v2)
+  training_captures/device=<id>/session=<session_id>/<photo_id>.jpg  # fotos crudas para reentrenamiento (bajo demanda)
 exports/                               # opcional: datasets armados a mano para etiquetado/reentrenamiento
 ```
+
+### `raw/training_captures/` — fotos para reentrenamiento (bajo demanda, distinto del flujo de eventos)
+
+Cuando un operador prende "Capturar para reentrenamiento" en el dashboard
+(`POST /api/devices/{id}/training-captures`), el borde (`edge_pose/epp_edge/training_capture.py`,
+`CaptureWorker`) sube fotos crudas de la cámara (1 fps por defecto, **sin** las cajas/esqueleto que
+sí lleva `raw/thumbs/`) a `raw/training_captures/device=<id>/session=<session_id>/<photo_id>.jpg`,
+con el mismo patrón idempotente `if_generation_match=0` que el resto de `raw/`. No pasa por el
+outbox de eventos ni genera un documento en `detecciones_confirmadas`: el progreso de la sesión
+vive en Firestore (`training_sessions/{session_id}`, ver `docs/DATA_MODEL.md`). El dataset
+resultante se baja desde el dashboard (zip, solo rol admin) o con `gsutil -m cp -r` para
+etiquetarlo en Roboflow y reentrenar con `training/pipeline.py` — **fuera de este sistema, en dev**.
+Esta carpeta **no tiene regla de lifecycle** (ver sección 3): a diferencia de `raw/images/` y
+`raw/thumbs/`, nadie la borra sola.
 
 - Particiones estilo Hive (`device=`, `dt=`); las claves son `device`/`dt`, **no** `device_id`/
   `date`, para no chocar con los campos homónimos del JSON al declarar la tabla externa de
@@ -54,7 +69,9 @@ exports/                               # opcional: datasets armados a mano para 
   `roles/datastore.user` a nivel de proyecto, para Firestore). No puede leer, listar ni borrar
   objetos del lake — ver el riesgo residual documentado en `docs/SECURITY.md`.
 - SA de runtime del backend (`platform-runtime`): `roles/storage.objectViewer`, solo para poder
-  firmar URLs de lectura temporal (`lake.py`); nunca lista el bucket completo.
+  firmar URLs de lectura temporal (`lake.py`); nunca lista el bucket completo. Ambos roles son a
+  nivel de bucket (sin condición por prefijo), así que `raw/training_captures/` quedó cubierto sin
+  ningún cambio de IAM al agregarlo.
 - SA de la conexión de BigQuery (`lake-conn`, ver más abajo): `roles/storage.objectViewer`, la
   añade `infra/06_bigquery.sh` tras leer el `serviceAccountId` real de la conexión con
   `bq show --connection` (no es un valor fijo: lo asigna GCP al crear la conexión).
@@ -76,6 +93,11 @@ Las imágenes pasan a Nearline a los 30 días y se borran a los 60 (Nearline exi
 mínima de 30 días para no cobrar por borrado anticipado: 30 + 30 = 60 cumple exacto). Los JSON de
 `raw/events/` **no tienen regla de expiración**: no contienen datos personales (son estructurados,
 sin imagen) y son la base para reportes históricos.
+
+`raw/training_captures/` tampoco tiene `matchesPrefix` en la política: las fotos de reentrenamiento
+se conservan indefinidamente hasta que alguien las baje y las borre a mano (`gsutil -m rm -r`). Es
+a propósito (el dataset debe sobrevivir hasta que se etiquete), pero implica que esta carpeta puede
+crecer sin tope si nadie hace limpieza — ver `docs/COSTS.md`.
 
 Cuando una imagen se borra por esta política, su evento y su JSON siguen existiendo con
 `capture.uri` apuntando a un objeto que ya no está. La API (`backend/epp_api/lake.py`,
