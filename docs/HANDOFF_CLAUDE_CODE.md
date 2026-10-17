@@ -90,22 +90,27 @@ Rama de trabajo: `remediacion/auditoria-2026-10` → al final PR hacia `main` (*
 ### Próximo foco explícito del usuario
 Primero (nuevo, 2026-10-16): confirmar que el dashboard funciona de punta a punta con `raspberry-pi-01` corriendo `edge_pose` (dos modelos) en producción real durante unos días. Después, retomar costos y optimización (foco desde el 2026-10-11: revisar Billing, confirmar que el streaming bajo demanda no genera cargos inesperados, y afinar antes de seguir con limpieza de GCP) — no se tocó esta sesión.
 
-### Pendiente (en orden)
-1. Deploy a Cloud Run del fix de `theme-init.js` (commit `03fefff`) — 🔒 GCP, con OK del usuario; cosmético, sin apuro pero sigue pendiente.
-2. `07_pubsub_teardown.sh`: antes verificar que `dbraspberry/detecciones_por_tiempo` esté vacía; requiere env `EVENTARC_TRIGGERS` y `PUBSUB_SUBSCRIPTIONS`; nunca `--force`; parar ante avisos de dependencias.
-3. `08_cleanup_billing.sh`: política de limpieza de Artifact Registry, lifecycle de fuentes de Cloud Build, SA `cloud-build-deployer`; borrar imagen `build-test:phase1` si sigue; `REMOVE_COMPUTE_EDITOR=1` solo si el deploy con build SA funciona.
-4. Alerta de presupuesto: el usuario añade su correo como destinatario en Billing → Manage access; monto según `docs/COSTS.md`. Pendiente desde el 2026-10-11, sin tocar.
-5. Revocar la key vieja `b78e4fdf...` de `raspberry-pi-worker` (con OK del usuario) una vez confirmado que la nueva sigue funcionando estable.
-6. Borrar `gcp/` y `front-end/` (código viejo) y verificar los criterios de aceptación de la Fase 4.
-7. Fase 5: reintentar `06_bigquery.sh` (el bucket ya no está vacío), correr `reconcile_lake.py`, verificar una consulta por `event_id`.
-8. Fase 7 (opcional, y ahora de menor prioridad porque `raspberrypi/` no es el nodo desplegado): correr `benchmark.py` en la Pi real para tener números reales de latencia/FPS del modelo de una sola clase y actualizar `docs/MODEL.md`.
-9. Pedir al usuario activar GitHub Secret scanning + Push protection (acción manual, Fase 8).
-10. Confirmar un run real de GitHub Actions (especialmente el job `image`, no validado localmente).
-11. Fase 10: verificación extremo a extremo, cierre de costos (revisar Billing al día siguiente de pruebas con streaming real), checklist de seguridad final, y abrir el PR hacia `main` (sin merge).
-12. Corregir la redacción de criterios que mencionen `capture.uri`/`capture.thumb_uri` en `docs/PLAN_REMEDIACION.md`.
-13. Opcional ofrecido: revisar Cloud Logging por uso indebido de las keys viejas (si se omite, nota en SECURITY.md).
-14. Decidir si se quiere extender el contrato del evento / el dashboard para mostrar el detalle de cumplimiento por persona que ya produce `edge_pose` (`cumple`, `faltantes`, `mal_colocados`, `personas`) — hoy esos campos viajan a Firestore/BigQuery pero el frontend no los pinta (ver `docs/INTEGRACION_NODO_POSE.md` §4). Decisión explícita del 2026-10-16: por ahora NO, mantener el alcance acotado; queda para retomar si el usuario lo pide.
-15. `raspberrypi/` (nodo de una sola clase) queda en el repo sin desplegar, de respaldo. Si en algún momento se decide borrarlo del todo, pedir OK del usuario antes — por ahora se deja como está, sin tocar.
+### Cerrado en la segunda mitad de esta misma sesión (2026-10-16/17, con OK del usuario en cada bloque 🔒 GCP)
+1. ~~Deploy a Cloud Run del fix de `theme-init.js`~~ — hecho: revisión `orchestrator-service-00009-zlg`, además **usando por fin la SA de build** (`cloud-build-deployer`), lo que confirmó que ese camino funciona.
+2. ~~Quitar `roles/editor` a la SA default de Compute~~ — hecho, ya que el deploy con la SA de build quedó confirmado.
+3. ~~`07_pubsub_teardown.sh`~~ — no hizo falta borrar nada: ya no había topics, subscripciones, trigger de Eventarc, servicio legacy ni SA del invoker (probablemente de una limpieza anterior no registrada). Deshabilitar `pubsub.googleapis.com` **no se pudo** (es dependencia dura de `cloudbuild`/`containerregistry`, que sí usamos) — queda habilitada a propósito, sin nada publicando.
+4. ~~`08_cleanup_billing.sh`~~ — política de Artifact Registry y SA `cloud-build-deployer` ya existían; se aplicó el lifecycle de 7 días a los 2 buckets de fuentes de Cloud Build que faltaba.
+5. ~~Revocar la key vieja `b78e4fdf...`~~ — hecho, solo queda `bbb3d16c...` activa.
+6. ~~Borrar `gcp/` y `front-end/`~~ — hecho (commit `a891014`).
+7. ~~Fase 5: `06_bigquery.sh` + `reconcile_lake.py`~~ — hecho: tabla externa (con columnas de episodio), curada, 3 vistas y carga inicial (`99_initial_load.sql`) corridas; `reconcile_lake.py --date 2026-10-16` → **RESULTADO: coherente** (2 eventos en daily_stats/Firestore/lago/BigQuery). La consulta programada diaria (`curate_events`) quedó pendiente: pide una autorización OAuth interactiva que ni `!` puede completar en este entorno — hay que crearla a mano desde BigQuery Console → Scheduled queries, con `infra/bigquery/04_merge_daily.sql` (diaria, 06:00 UTC).
+10. ~~Confirmar un run real de GitHub Actions~~ — el workflow solo corre en `push a main` o `pull_request`; nunca se había disparado en esta rama. Al abrir el PR corrió por primera vez y encontró 8 líneas largas preexistentes (`raspberrypi/tools/benchmark.py`, `export_model.py`, nunca antes linteadas de verdad) y un problema de `ruff format`; corregidos (commits `cdb062a`, `efaa9bd`). **Run final: éxito completo** (gitleaks, frontend, `image`/Docker — primera vez validado —, backend+raspberrypi, e2e).
+11. Fase 10, parcial: **PR abierto hacia `main` (sin mergear)**: https://github.com/CesarPP23/app-detection-epp-demo/pull/1 — CI en verde. Falta: cierre de costos (ver abajo, no se puede adelantar) y que el usuario revise/apruebe el PR en GitHub.
+12. ~~Corregir redacción `capture_uri`/`thumb_uri` en `PLAN_REMEDIACION.md`~~ — hecho (commit `a891014`).
+
+### Sigue pendiente
+- **Alerta de presupuesto** y **GitHub Secret scanning + Push protection**: acciones manuales del usuario, no ejecutables por el agente.
+- **Cierre de costos** (parte de Fase 10): revisar Billing al día siguiente de las pruebas con streaming real de hoy — no se puede adelantar.
+- Revisar y aprobar/mergear el PR #1 en GitHub (sigue siendo decisión del usuario, nunca merge directo del agente).
+- Consulta programada `curate_events` en BigQuery: crearla a mano desde la Consola (ver punto 7 arriba).
+- `/healthz` devuelve 404 de forma intermitente tras el deploy del 2026-10-16 (headers parecen de infraestructura de Google, no de la app propia; las demás rutas —`/api/auth/config`, `/theme-init.js`— responden bien). No investigado a fondo, no bloqueaba nada del alcance de esta sesión.
+- Fase 7 (opcional, baja prioridad: `raspberrypi/` no es el nodo desplegado): correr `benchmark.py` en la Pi real.
+- Opcional: revisar Cloud Logging por uso indebido de la key vieja ya revocada.
+- Decisión ya tomada, no reabrir sin que el usuario lo pida: NO extender el contrato del evento/dashboard con el detalle de cumplimiento por persona de `edge_pose` (ver `docs/INTEGRACION_NODO_POSE.md` §4). `raspberrypi/` queda en el repo sin desplegar, de respaldo.
 
 ### Resumen de sesiones anteriores (2026-10-11, laptop nueva — clon fresco)
 - Repo clonado (`--single-branch`) y luego también se trajo `origin/main` (`git fetch origin main:refs/remotes/origin/main`) porque los subagentes con `isolation: worktree` la necesitan como base.
@@ -146,6 +151,12 @@ Primero (nuevo, 2026-10-16): confirmar que el dashboard funciona de punta a punt
 - **Los índices compuestos de Firestore son direccionales**: un índice con `end_ts` descendente NO sirve para una consulta que filtra `end_ts > X` y ordena `end_ts` ascendente (y viceversa) — hace falta un índice por cada combinación de dirección realmente usada por una consulta con rango + orden. Causó el 500 de `/api/devices/{id}/summary` y `/events` (ver §6, §7).
 - **`edge_pose/install.sh` corre como el usuario normal (sin sudo) para el `rsync` del paso 2** — si los modelos se colocan a mano en el origen con `sudo mv`/`sudo chown root:root` (para que coincida con el resto de `/opt/epp-edge/app`, que sí es root-owned), el `rsync` no root no puede ni abrir esas carpetas ("Permission denied"). Hay que dejarlos con dueño el mismo usuario que corre `install.sh` (`chown -R vizia:vizia`), no root.
 - **El wheel de `torch` para aarch64 (~100+ MB) se puede corromper a medias si la Wi-Fi de la Pi se corta durante la descarga**, dando un error de runtime engañoso (`ImportError: .../libtorch_cpu.so: undefined symbol: sbgemm_`, parece un problema de versión de OpenBLAS pero es el archivo incompleto). Antes de investigar BLAS/versiones, reinstalar limpio: `pip install --no-cache-dir --force-reinstall torch torchvision --index-url https://download.pytorch.org/whl/cpu`.
+- **`gcloud run deploy --source=.` usa Buildpacks en silencio (sin avisar) si no encuentra un `Dockerfile` en el directorio actual** — en vez de fallar. Verificar `Get-Location` / `Test-Path .\Dockerfile` antes de desplegar; el `Dockerfile` de este repo vive en la raíz, no en `backend/` ni `raspberrypi/`.
+- **Flags de `gcloud` con comas dentro de un solo valor** (`--set-secrets="A=a:latest,B=b:latest"`, `--set-env-vars="X=1,Y=2"`) **necesitan comillas explícitas en PowerShell**, igual que `--field-config` (ver abajo) — sin comillas, la coma se pierde o se reemplaza por un espacio y `gcloud` lo interpreta como un spec inválido.
+- **El flujo OAuth interactivo de `bq mk --transfer_config` (consultas programadas) no funciona ni con `!`**: pide pegar un código de verificación por `stdin`, y ninguna de las dos terminales (la del agente, la del usuario vía `!`) tiene un `stdin` real para eso — da `Got EOF; exiting`. Hay que crear la consulta programada a mano desde la Consola de BigQuery (Scheduled queries), no por CLI. (El login normal de `gcloud auth application-default login` sí funciona con `!`, porque abre un navegador real en vez de pedir pegar un código.)
+- **`bq query` por stdin desde PowerShell corrompe el SQL** (error `Illegal input character "\357"`, un BOM mal interpretado) incluso reescribiendo el archivo sin BOM — es un problema de cómo PowerShell canaliza bytes a un ejecutable nativo. Pasar el SQL como argumento directo en vez de por stdin, **sin comentarios `-- ...`** (si alguna línea del SQL empieza con `--`, `bq` la interpreta como una flag desconocida) y **colapsado a una sola línea** (un argumento multilínea se trunca a la primera línea al pasarlo a un ejecutable nativo desde PowerShell).
+- Las **keys de SA eliminadas pueden seguir apareciendo en `gcloud iam service-accounts keys list` por unos segundos** después de borrarlas (aunque el comando de borrado ya confirmó éxito) — es propagación/caché de listado, no un fallo del borrado; reintentar el listado tras una breve espera.
+- **Un servicio de GCP puede ser dependencia obligatoria de otro que sí se usa**: `pubsub.googleapis.com` resultó ser dependencia de `cloudbuild.googleapis.com`/`containerregistry.googleapis.com` (los deploys los necesitan); `gcloud services disable` avisa de esto y hay que respetarlo (no forzar con `disable_dependent_services=true`), aunque el script de turno (`07_pubsub_teardown.sh`) esperara poder deshabilitarlo sin problema.
 
 ## 9. Trailers de commit y PR
 Commits terminan con el trailer que indique la sesión activa (cambia de una sesión a otra; usar el que diga el propio entorno, no copiar uno viejo literalmente). Ejemplo de esta sesión (2026-10-16):
@@ -156,7 +167,7 @@ Claude-Session: https://claude.ai/code/session_01NyqsE5s3WDHT6u5BCiYQHe
 La descripción del PR termina con `🤖 Generated with [Claude Code](https://claude.com/claude-code)` y el link de sesión.
 
 ## 10. Commits en la rama
-Ya son demasiados para listar a mano (>70). Usar `git log --oneline origin/remediacion/auditoria-2026-10` para ver el historial completo. HEAD al cierre de esta sesión (2026-10-16): `8d62cd3` (orden descendente: `8d62cd3` índice Firestore en `infra/04_firestore.sh` → `03fefff` fix `theme-init.js` → `b8ce206` try/except en la FSM de `edge_pose` → `17e5c8b` fusión del nodo con pose de Marcelo → `21f95d5` cierre de la sesión anterior).
+Ya son demasiados para listar a mano (>80). Usar `git log --oneline origin/remediacion/auditoria-2026-10` para ver el historial completo. HEAD al cierre de esta sesión (2026-10-17): `efaa9bd` (orden descendente: `efaa9bd` ruff format → `cdb062a` fix E501 que bloqueaba el primer CI real → `bc47c0e` CHANGELOG → `a891014` borra `gcp/`+`front-end/` → `9eb786b` doc → `8d62cd3` índice Firestore → `03fefff` fix `theme-init.js` → `b8ce206` try/except en la FSM de `edge_pose` → `17e5c8b` fusión del nodo con pose de Marcelo → `21f95d5` cierre de la sesión anterior). **PR abierto hacia `main` sin mergear**: https://github.com/CesarPP23/app-detection-epp-demo/pull/1 (CI en verde).
 
 ## 11. Cómo retomar (en esta laptop u otra)
 1. `git clone --branch remediacion/auditoria-2026-10 --single-branch <url>` (o `git checkout remediacion/auditoria-2026-10` si el repo ya existe). Si se usan subagentes con `isolation: worktree`, hacer también `git fetch origin main:refs/remotes/origin/main` (ver quirks §8).
