@@ -108,7 +108,11 @@ test("los filtros viven en la URL y llegan al servidor", async ({ page }) => {
   await expect(page.getByRole("table")).toBeVisible();
 
   // Cambiar un filtro desde la UI actualiza la URL.
-  await page.getByLabel("Incluir simulados").uncheck();
+  // Se usa click() + una aserción con reintento (en vez de uncheck(), que solo verifica el
+  // estado una vez tras el clic) porque el re-render de React tras actualizar la URL puede
+  // tardar más que esa única verificación bajo carga en CI.
+  await page.getByLabel("Incluir simulados").click();
+  await expect(page.getByLabel("Incluir simulados")).not.toBeChecked();
   await expect(page).not.toHaveURL(/sim=1/);
   await expect(page).toHaveURL(/clase=hairnet/);
 });
