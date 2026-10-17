@@ -214,3 +214,27 @@ class AuditEntry(BaseModel):
 class AuditPage(BaseModel):
     items: list[AuditEntry]
     next_cursor: str | None = None
+
+
+# --- Captura de fotos para reentrenamiento -----------------------------------------------------
+
+
+class TrainingCaptureStarted(BaseModel):
+    session_id: str
+    started_at: datetime
+
+
+class TrainingSessionSummary(BaseModel):
+    session_id: str
+    device_id: str
+    started_at: datetime
+    started_by: str
+    ended_at: datetime | None = None
+    frame_count: int = 0
+    status: Literal["capturing", "completed"]
+    closed_reason: str | None = None
+
+
+class TrainingSessionPage(BaseModel):
+    items: list[TrainingSessionSummary]
+    next_cursor: str | None = None

@@ -442,6 +442,8 @@ class DeviceControl:
         self._lock = threading.Lock()
         self._lease_deadline = 0.0
         self._last_renewed = None
+        self._capture_requested = False
+        self._capture_session_id: Optional[str] = None
         self.last_sync = 0.0
         self._watch = None
         self._stop = threading.Event()
@@ -459,6 +461,8 @@ class DeviceControl:
                 age = max(0.0, (now_wall - parse_ts(renewed)).total_seconds())
                 self._lease_deadline = self._clock() + max(0.0, lease - age)
                 self._last_renewed = renewed
+            self._capture_requested = bool(data.get("capture_requested"))
+            self._capture_session_id = data.get("capture_session_id")
             self.last_sync = self._clock()
 
     def should_run(self) -> bool:
@@ -468,6 +472,15 @@ class DeviceControl:
     def should_stream(self) -> bool:
         with self._lock:
             return self.desired_state == "running" and self._clock() < self._lease_deadline
+
+    def should_capture(self) -> bool:
+        """Captura de fotos para reentrenamiento: toggle persistente, no depende de un lease."""
+        with self._lock:
+            return self._capture_requested and self._capture_session_id is not None
+
+    def capture_session(self) -> Optional[str]:
+        with self._lock:
+            return self._capture_session_id
 
     def start(self) -> "DeviceControl":
         def on_snapshot(docs, changes, read_time):
@@ -743,8 +756,8 @@ def read_secret(path: Path) -> str:
 
 
 def start_cloud_v2(cfg: dict, base_dir: Path, db_path: Path, frames, status_fn: Callable[[], dict],
-                   is_simulated: bool) -> dict:
-    """Crea los clientes de Google y arranca outbox, uploader, control, salud y video. Devuelve los componentes."""
+                   is_simulated: bool, cam=None) -> dict:
+    """Crea los clientes de Google y arranca outbox, uploader, control, salud, video y captura. Devuelve los componentes."""
     c = cfg["cloud_v2"]
     cred = (base_dir / c["credentials_file"]).resolve()
     if cred.exists():
@@ -781,5 +794,14 @@ def start_cloud_v2(cfg: dict, base_dir: Path, db_path: Path, frames, status_fn: 
         streamer = StreamWorker(frames, control, health, url, token, c.get("stream_fps", 8),
                                 c.get("stream_width", 640), c.get("stream_jpeg_quality", 60))
         streamer.start()
+    capture_worker = None
+    if cam is not None:
+        from .training_capture import CaptureWorker  # import tardío: módulo propio, sin ciclo con cloud_v2
+        tc = c.get("training_capture", {})
+        capture_worker = CaptureWorker(cam, control, bucket, events_db, cfg["device"]["id"],
+                                       fps=tc.get("fps", 1.0), jpeg_quality=tc.get("jpeg_quality", 85),
+                                       max_duration_s=tc.get("max_duration_s", 3600))
+        capture_worker.start()
     log.info("Nube 2.0.0 activa: proyecto %s, bucket %s, host %s", project, c["lake_bucket"], c.get("orchestrator_host"))
-    return {"outbox": outbox, "uploader": uploader, "control": control, "health": health, "streamer": streamer}
+    return {"outbox": outbox, "uploader": uploader, "control": control, "health": health, "streamer": streamer,
+            "capture": capture_worker}
