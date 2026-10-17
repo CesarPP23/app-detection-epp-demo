@@ -68,4 +68,8 @@ async def spa(path: str):
     index = _static / "index.html"
     if path.startswith(("api/", "ws/")) or not index.is_file():
         raise HTTPException(404)
+    if path:
+        candidate = (_static / path).resolve()
+        if candidate.is_file() and candidate.is_relative_to(_static.resolve()):
+            return FileResponse(candidate, headers={"Cache-Control": "no-cache"})
     return FileResponse(index, headers={"Cache-Control": "no-store"})

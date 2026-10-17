@@ -70,7 +70,7 @@ class Env:
 
 @pytest.fixture
 def make_env(monkeypatch):
-    def build(auth_mode: str = "google") -> Env:
+    def build(auth_mode: str = "google", static_dir: str = "/nonexistent") -> Env:
         monkeypatch.delenv("K_SERVICE", raising=False)
         for key, value in {
             "DEVICE_TOKEN": "a" * 40,
@@ -79,7 +79,7 @@ def make_env(monkeypatch):
             "AUTH_MODE": auth_mode,
             "GOOGLE_OAUTH_CLIENT_ID": "client-id.apps.googleusercontent.com",
             "PUBLIC_BASE_URL": BASE,
-            "STATIC_DIR": "/nonexistent",
+            "STATIC_DIR": static_dir,
         }.items():
             monkeypatch.setenv(key, value)
         mods: dict[str, types.ModuleType] = {}

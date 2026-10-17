@@ -415,6 +415,35 @@ def test_no_se_puede_dejar_el_sistema_sin_admin(make_env):
     assert r.status_code == 200
 
 
+# --- SPA estática ------------------------------------------------------------------------------
+
+
+def test_spa_sirve_archivos_sueltos_de_la_raiz_del_build(make_env, tmp_path):
+    """`frontend/public/*` (p. ej. theme-init.js) se copia a la raíz del build, no a assets/."""
+    (tmp_path / "index.html").write_text("<html>spa</html>", encoding="utf-8")
+    (tmp_path / "theme-init.js").write_text("// tema", encoding="utf-8")
+    env = make_env(static_dir=str(tmp_path))
+    r = env.client.get("/theme-init.js")
+    assert r.status_code == 200 and r.text == "// tema"
+    assert "javascript" in r.headers["content-type"]
+    assert r.headers["cache-control"] == "no-cache"
+
+
+def test_spa_ruta_desconocida_sigue_devolviendo_index(make_env, tmp_path):
+    (tmp_path / "index.html").write_text("<html>spa</html>", encoding="utf-8")
+    env = make_env(static_dir=str(tmp_path))
+    r = env.client.get("/eventos/algo-que-no-existe")
+    assert r.status_code == 200 and r.text == "<html>spa</html>" and r.headers["cache-control"] == "no-store"
+
+
+def test_spa_no_sirve_archivos_fuera_del_directorio_estatico(make_env, tmp_path):
+    (tmp_path / "index.html").write_text("<html>spa</html>", encoding="utf-8")
+    (tmp_path.parent / "secreto.txt").write_text("no deberia verse", encoding="utf-8")
+    env = make_env(static_dir=str(tmp_path))
+    r = env.client.get(f"/%2e%2e/{tmp_path.name}/../secreto.txt")
+    assert r.status_code in (200, 404) and "no deberia verse" not in r.text
+
+
 # --- WebSocket del navegador ------------------------------------------------------------------
 
 
