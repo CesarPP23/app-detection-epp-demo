@@ -1,12 +1,13 @@
 # Data lake
 
 **Para quién es:** quien consulte BigQuery, investigue una pérdida de datos o extienda el lake.
-**Última verificación:** 2026-10-11.
+**Última verificación:** 2026-10-16.
 
 Bucket `gs://epp-detection-v1-lake` (región `us-central1`) + dataset de BigQuery `epp_lake`. Diseño
 completo en `docs/PLAN_REMEDIACION.md` sección 9 (Fase 5); lo que sigue describe lo ya implementado
-en `raspberrypi/epp_edge/outbox.py`, `infra/05_lake_bucket.sh`, `infra/06_bigquery.sh` e
-`infra/bigquery/*.sql`.
+en `raspberrypi/epp_edge/outbox.py` y `edge_pose/epp_edge/cloud_v2.py` (mismo contrato de subida en
+los dos nodos de borde — ver `docs/ARCHITECTURE.md` sección 0), `infra/05_lake_bucket.sh`,
+`infra/06_bigquery.sh` e `infra/bigquery/*.sql`.
 
 ## 1. Zonas y layout en GCS
 
@@ -108,14 +109,30 @@ aplicados por `infra/06_bigquery.sh` en este orden:
    - `v_daily_by_class`: eventos, segundos, confianza media y cobertura de capturas (`COUNTIF(
      capture.status = 'ok')`) por dispositivo, día (hora de Lima) y clase — excluye eventos
      simulados.
+6. **`06_episodios.sql`** (agregado 2026-10-16, para `edge_pose/`) — recrea `raw_events` con las
+   columnas propias del episodio al final del esquema (`zona`, `cumple`, `faltantes`,
+   `mal_colocados`, `no_evaluables`, `personas_max`, `n_personas`, `ratios`, `epp_fps`,
+   `episodio_local_id` — ver `docs/DATA_MODEL.md` sección 1-bis), hace el `ALTER TABLE ... ADD
+   COLUMN IF NOT EXISTS` equivalente sobre `events` (plata), y crea la vista oro
+   `v_cumplimiento_diario` (tasa de cumplimiento y EPP más faltante, por dispositivo y día de
+   Lima). Para los eventos del nodo por clase (`raspberrypi/`) estas columnas quedan en `NULL`. Se
+   ejecuta después de `01` y `03` porque depende de que ambas tablas ya existan; el MERGE diario
+   (`04_merge_daily.sql`) usa `INSERT ROW`, por lo que el esquema de `raw_events` y `events` debe
+   coincidir exactamente — de ahí que las columnas nuevas se agreguen en el mismo orden en los dos
+   `ALTER`/`CREATE`.
 
-### Estado al cierre de esta sesión (ver `docs/HANDOFF_CLAUDE_CODE.md` sección 7)
+### Estado al cierre de la sesión 2026-10-16
 
-`06_bigquery.sh` se ejecutó parcialmente: el dataset, la conexión y el permiso de lectura sobre el
-bucket quedaron creados, pero la tabla externa `raw_events` falló ("Cannot query hive partitioned
-data … without any associated files") porque el bucket todavía no tenía ningún objeto subido. El
-script es relanzable: debe reintentarse después de que la Pi (real o simulada) suba al menos un
-evento.
+`06_bigquery.sh` (incluido `06_episodios.sql`) corrió completo sobre datos reales: el dispositivo
+`raspberry-pi-01` ya tenía eventos subidos al lake para cuando se ejecutó, así que `raw_events` se
+creó sin el problema de partición-sin-archivos que había en el primer intento (sesión 2026-10-11,
+con el bucket todavía vacío). `99_initial_load.sql` se corrió una vez a mano y
+`raspberrypi/tools/reconcile_lake.py` confirmó **coherencia** entre Firestore, GCS y
+`epp_lake.events` para el día verificado (sección 5). Pendiente, no bloqueante: programar
+`04_merge_daily.sql` como consulta diaria vía `bq mk --transfer_config` requiere un flujo OAuth
+interactivo con pegado de código de verificación que no funciona ni por la herramienta de shell de
+Claude Code ni por `!`-comandos en esta máquina — se documentó como paso manual único en la consola
+de BigQuery (`docs/HANDOFF_CLAUDE_CODE.md` sección 7).
 
 ## 5. Reconciliación (control de calidad y pérdida de datos)
 

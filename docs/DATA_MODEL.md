@@ -1,7 +1,8 @@
 # Modelo de datos
 
 **Para quién es:** quien escriba o lea datos del sistema (backend, borde, BigQuery) o investigue un
-evento. **Última verificación:** 2026-10-11.
+evento. **Última verificación:** 2026-10-16 (agrega el contrato de episodio de `edge_pose/`, nodo
+activo en `raspberry-pi-01` desde esa fecha — ver sección 1-bis).
 
 Dos bases de Firestore en el proyecto `epp-detection-v1`, sin migración de datos entre ellas
 (decisión U1 de `docs/PLAN_REMEDIACION.md`):
@@ -72,6 +73,44 @@ servidor) y la fila de `epp_lake.raw_events`/`epp_lake.events` en BigQuery.
 | `detections_at_capture` | array | **Todas** las cajas del frame elegido (de todas las clases), no solo la de la clase del evento: es el contexto completo de la captura. |
 | `edge` | object | `edge_version` (de `epp_edge/__init__.py`), `model_version` (SHA-256 corto del modelo NCNN), `camera_source`. |
 
+## 1-bis. Contrato de episodio (edge_pose, nodo activo desde 2026-10-16)
+
+`edge_pose/epp_edge/cloud_v2.py::build_event()` arma el **mismo contrato v2** de la sección 1 (y
+usa el mismo outbox idempotente, el mismo esquema de nombres de `lake_path`, el mismo
+`detections_at_capture`) pero a partir de un **episodio** (presencia continua de una o más
+personas) en vez de una sesión por clase. Para no tener que tocar la API ni el panel, el episodio
+se disfraza de detección:
+
+- `event_type` = `"episodio"` (en vez de `"deteccion_confirmada"`).
+- `clase_id` / `nombre_clase` = `100` / `"episodio_conforme"` si todas las personas cumplen,
+  `101` / `"episodio_no_conforme"` si alguna no — así `daily_stats.by_class` y los gráficos por
+  clase del panel lo cuentan sin cambios de código (`EPISODE_CLASS` en `cloud_v2.py`).
+- `detections_at_capture` trae las cajas de Gorra/Guante/Mascarilla del frame de mejor confianza
+  (igual que en el contrato de un solo modelo), para que el visor de cajas del panel siga
+  funcionando igual.
+- Los campos propios del episodio viajan **además** de los de arriba; la API y el panel los
+  ignoran porque no los conocen, pero quedan en Firestore y en BigQuery (columnas agregadas por
+  `06_episodios.sql`, ver `docs/DATA_LAKE.md`):
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `zona` | string \| null | Zona/etiqueta de la cámara, si está configurada en el nodo. |
+| `cumple` | bool | Veredicto final del episodio (determina `clase_id`/`nombre_clase` de arriba). |
+| `faltantes` | array\<string\> | EPP que nunca se detectó en ninguna persona evaluable del episodio. |
+| `mal_colocados` | array\<string\> | EPP detectado pero con colocación incorrecta (`placement.py`) en algún momento. |
+| `no_evaluables` | array\<string\> | EPP que no se pudo evaluar (p. ej. mano fuera de cuadro, ángulo malo). |
+| `personas_max` | int | Máximo de personas simultáneas vistas durante el episodio. |
+| `n_personas` | int | Personas distintas (por id de ByteTrack) evaluadas en el episodio. |
+| `personas` | array\<object\> | Detalle por persona (id de tracking, veredicto, EPP evaluado) — ver `edge_pose/epp_edge/state_machine.py::PersonStats`. |
+| `ratios.{gorra,guante,mascarilla}` | float [0-1] \| null | Fracción de frames evaluables en los que esa prenda estuvo bien puesta, por tipo de EPP, agregado de todas las personas. |
+| `epp_fps` | float \| null | FPS real del modelo de EPP durante el episodio (puede ser menor que el nominal si `ACTIVE` compite por CPU con `Pose`). |
+| `episodio_local_id` | int | ID autoincremental de la fila en la SQLite local del nodo (`epp_edge.db`), para correlación con logs del dispositivo. |
+
+Esto resuelve, **solo para los dispositivos que corren `edge_pose/`**, la limitación D9 descrita en
+la sección 3: el episodio ya es una unidad por grupo de personas presentes (con veredicto y conteo
+`n_personas`/`personas_max`), no una sesión por nombre de clase. `raspberrypi/` (nodo de respaldo,
+no desplegado) sigue teniendo la limitación D9 tal cual está documentada.
+
 ## 2. Colecciones de Firestore
 
 ### `dbraspberry` (eventos)
@@ -81,9 +120,13 @@ servidor) y la fila de `epp_lake.raw_events`/`epp_lake.events` en BigQuery.
 | `detecciones_confirmadas` | `{event_id}` | solo la Pi (`Uploader._firestore`, `batch.create`) | contrato v2 completo + `created_at` (`SERVER_TIMESTAMP`) |
 | `daily_stats` | `{device_id}_{YYYY-MM-DD}` | solo la Pi (mismo batch, `merge=True`) | `device_id`, `date`, `events` (`Increment`), `seconds` (`Increment`), `by_class.{nombre_clase}` (`Increment`), `updated_at` |
 
-Índices compuestos (creados por `infra/04_firestore.sh`):
+Índices compuestos (creados por `infra/04_firestore.sh`, 4 en total):
 - `detecciones_confirmadas`: `device_id ASC, end_ts DESC` (lista general) y
   `device_id ASC, nombre_clase ASC, end_ts DESC` (filtro por clase).
+- `detecciones_confirmadas`: `device_id ASC, end_ts ASC` (agregado 2026-10-16: lo usa
+  `repo.py:_newer_than` para la comparación "¿hay eventos más nuevos que X?" del polling del
+  panel; Firestore exige dirección exacta por campo en consultas con rango + orden, así que el
+  índice `DESC` de la lista general no sirve para esta — faltaba y causaba 500 intermitentes).
 - `daily_stats`: `device_id ASC, date ASC`.
 
 ### `(default)` (control, salud, usuarios, auditoría)
@@ -110,8 +153,11 @@ la cookie se borra sin más), `desired_state`, `live_start`, `live_end`, `captur
 ## 3. Reglas anti-ruido (líneas de tiempo de ejemplo)
 
 El agregador (`raspberrypi/epp_edge/aggregator.py`) mantiene **una sesión activa por nombre de
-clase** (`_ActiveSession`), no por persona (limitación D9 del plan, documentada y no resuelta:
-dos personas con guantes se ven como una sola sesión de `latex_gloves`).
+clase** (`_ActiveSession`), no por persona (limitación D9 del plan; dos personas con guantes se ven
+como una sola sesión de `latex_gloves`). Este apartado describe ese nodo de respaldo
+(`raspberrypi/`, no desplegado). El nodo activo (`edge_pose/`) no tiene este problema: ver
+sección 1-bis — ahí la unidad es el episodio (grupo de personas presentes), con `n_personas` y
+veredicto por persona en vez de una sesión por clase.
 
 ```
 Parámetros de ejemplo: MIN_SECONDS_TO_CONFIRM=1.0  MIN_FRAMES_TO_CONFIRM=3  SESSION_GAP_SECONDS=4.0

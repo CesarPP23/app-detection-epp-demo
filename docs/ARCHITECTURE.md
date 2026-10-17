@@ -1,20 +1,97 @@
 # Arquitectura
 
 **Para quién es:** quien necesite entender cómo está armado el sistema para modificarlo, depurarlo
-o evaluarlo (otro desarrollador, un revisor de la tesis). **Última verificación:** 2026-10-11.
+o evaluarlo (otro desarrollador, un revisor de la tesis). **Última verificación:** 2026-10-16
+(agrega `edge_pose/`, nodo activo en la Pi física desde esa fecha — ver sección 0 y 1.1).
 
-Fuente de diseño: `docs/PLAN_REMEDIACION.md` secciones 1, 5, 6, 7 y 15. Este documento describe el
-código tal como quedó implementado en `backend/epp_api/` y `raspberrypi/epp_edge/`; donde el plan y
-el código difieren en un detalle menor, manda el código (se anota en el texto).
+Fuente de diseño: `docs/PLAN_REMEDIACION.md` secciones 1, 5, 6, 7 y 15 (para `raspberrypi/`) y
+`docs/INTEGRACION_NODO_POSE.md` (para `edge_pose/`). Este documento describe el código tal como
+quedó implementado en `backend/epp_api/`, `raspberrypi/epp_edge/` y `edge_pose/epp_edge/`; donde el
+plan y el código difieren en un detalle menor, manda el código (se anota en el texto).
+
+## 0. Panorama general (dos nodos de borde, una sola nube)
+
+```mermaid
+flowchart LR
+    subgraph PI["Raspberry Pi"]
+        direction TB
+        CAM(("Cámara"))
+        CAM --> EP["edge_pose/\n(ACTIVO desde 2026-10-16)\nEPP + pose, 2 modelos"]
+        CAM -. "de respaldo, no desplegado" .-> RP["raspberrypi/\n1 modelo, 1 clase"]
+    end
+    EP -- "outbox SQLite\nidempotente" --> GCS[("GCS data lake\nraw/images · thumbs · events")]
+    EP --> FSE[("Firestore dbraspberry\ndetecciones_confirmadas · daily_stats")]
+    EP <-- "video bajo demanda\n(solo con lease)" --> CR
+    RP -.-> GCS
+    RP -.-> FSE
+    FSC[("Firestore (default)\ndevice_control · device_health")] <--> CR["Cloud Run\norchestrator-service\n(API + relay + SPA)"]
+    CR --> FE(["Dashboard\nReact + TypeScript"])
+    GCS --> BQ1[["BigQuery\nraw_events · raw_images\n(bronce)"]]
+    BQ1 -- "MERGE diario\npor event_id" --> BQ2[["BigQuery events\n(plata, curada)"]]
+    BQ2 --> BQ3[["Vistas (oro)\nv_daily_by_class\nv_cumplimiento_diario"]]
+    BQ3 -. "consultas / reportes" .-> TESIS(["Análisis de la tesis"])
+```
+
+`edge_pose/` y `raspberrypi/` publican con el **mismo contrato** (outbox idempotente, `event_id`
+UUIDv7, lago por partición Hive, batch atómico de Firestore) — ver sección 1.1 y
+`docs/DATA_MODEL.md`. La diferencia es qué generan: `raspberrypi/` una detección por clase;
+`edge_pose/` un **episodio** (presencia continua de una persona) con veredicto de cumplimiento,
+representado como una pseudo-detección (`episodio_conforme`/`episodio_no_conforme`) para que el
+resto del sistema (Firestore, BigQuery, el dashboard) no necesite distinguir cuál de los dos lo
+generó.
 
 ## 1. Componentes
 
-### 1.1 Borde — `raspberrypi/epp_edge/`
+### 1.1 Borde, nodo ACTIVO — `edge_pose/epp_edge/` (dos modelos: EPP + pose)
+
+Reemplaza en la Pi física a `raspberrypi/epp_edge/` desde el 2026-10-16 (ver 1.1-bis). Un solo
+proceso (`python -m epp_edge.main`) con una máquina de estados de 3 niveles que escala el costo
+de cómputo según haga falta — en reposo no corre ningún modelo:
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+    IDLE --> PERSON_CHECK: movimiento (MOG2, ~1 ms, sin red neuronal)
+    PERSON_CHECK --> IDLE: sin movimiento
+    PERSON_CHECK --> ACTIVE: persona confirmada (pose, N frames seguidos)
+    ACTIVE --> IDLE: sin persona > absence_timeout_s (cierra el episodio)
+
+    state ACTIVE {
+        [*] --> Pose
+        Pose: Pose - YOLOv8n-pose 320px + ByteTrack. Cajas de persona + 17 keypoints + id estable
+        EPP: EPP - YOLOv8n 640px. Gorra / Guante / Mascarilla
+        Placement: placement.py - asocia EPP a persona por distancia a keypoints (escala = tamaño de cabeza)
+        Stats: PersonStats - acumula ok/mal/ausente por persona y por mano
+        Pose --> EPP: personas detectadas (opcional: EPP sobre un recorte por persona)
+        EPP --> Placement: cajas de EPP (frame completo o recorte)
+        Placement --> Stats: estado por EPP y por persona, este frame
+        Stats --> [*]: siguiente frame (hasta epp.max_fps)
+    }
+    ACTIVE --> ACTIVE: episodio sigue abierto
+```
+
+Al cerrar el episodio (`_close_episode`), se calcula el veredicto final por persona
+(`compliance_ratio`, mínimo de frames evaluables) y se arma el payload que sube `cloud_v2.py`.
+Más detalle de las reglas de colocación (cómo se decide "casco bien puesto" vs "mal puesto" vs
+"ausente") en `edge_pose/CAMBIOS_CESAR.md` y `docs/INTEGRACION_NODO_POSE.md`.
+
+| Componente | Archivo | Rol |
+|---|---|---|
+| `Camera` | `capture.py` | Captura continua (picamera2/USB/archivo), siempre expone el último frame |
+| `EPPStateMachine` | `state_machine.py` | La máquina de estados de arriba; wiring de `motion.py` + `detectors.py` + `placement.py` |
+| `MotionDetector` | `motion.py` | MOG2 sobre 160px; único "sensor" activo en `IDLE` |
+| `PoseDetector` / `EPPDetector` | `detectors.py` | Envoltorios de Ultralytics/NCNN para cada modelo |
+| `placement` | `placement.py` | Asociación EPP↔persona y reglas geométricas de colocación |
+| `cloud_v2` | `cloud_v2.py` | Mismo patrón que `raspberrypi/outbox.py`: outbox idempotente, `DeviceControl`, `HealthReporter`, `StreamWorker` |
+| `LocalServer` | `local_server.py` | Vista MJPEG + estado en LAN, para depurar sin pasar por la nube |
+
+### 1.1-bis Borde, nodo de respaldo (no desplegado) — `raspberrypi/epp_edge/`
 
 Un solo proceso (`python -m epp_edge`, entrypoint `app.py`) con varios hilos que se comunican por
 dos estructuras en memoria (`LatestSlot`, uno por tipo de dato) y una base SQLite local (el
 outbox). Ningún hilo bloquea a otro: el productor siempre sobrescribe, el consumidor siempre lee
-lo más reciente.
+lo más reciente. Queda en el repo como respaldo/referencia; el dispositivo real (`raspberry-pi-01`)
+corre `edge_pose/` desde el 2026-10-16 (ver `docs/HANDOFF_CLAUDE_CODE.md` §4/§7).
 
 | Hilo / componente | Archivo | Rol | Slot que produce / consume |
 |---|---|---|---|
@@ -134,6 +211,13 @@ El orden imágenes → sidecar → Firestore garantiza que si el documento exist
 captura **ya** está en el lake. Si falta el frame de mejor confianza o el disco se queda sin
 espacio, el evento **nunca se descarta**: se registra con `capture.status` = `missing` o
 `dropped_disk_full` (ver `docs/DATA_MODEL.md`).
+
+`edge_pose/` sigue el mismo diagrama con dos cambios: `AGG` es la máquina de estados de la sección
+1.1 (cierra el episodio al salir de `ACTIVE`, no una sesión por clase) y `CAP`/`OUT`/`UP` son las
+mismas piezas pero en `cloud_v2.py` en vez de `captures.py`/`outbox.py` — mismo outbox SQLite
+idempotente, mismo orden imágenes → sidecar → Firestore, mismo `if_generation_match=0`. Lo único
+que cambia es el contenido del payload (episodio en vez de sesión por clase — sección 1-bis de
+`docs/DATA_MODEL.md`).
 
 ## 4. Modos de falla
 
