@@ -64,6 +64,15 @@ Reescritura completa frente a la primera versión de la tesis, siguiendo
 - Documentación completa: este `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`,
   `docs/DATA_LAKE.md`, `docs/CLOUD_DEPLOYMENT.md`, `docs/SECURITY.md`, `docs/PRIVACY.md`,
   `docs/COSTS.md`, `docs/API.md`, `docs/adr/0001` a `0008`.
+- **Nodo de borde con dos modelos** (`edge_pose/`, 2026-10-16): sustituye en la Pi física al nodo
+  de una sola clase (`raspberrypi/`, que queda en el repo sin desplegar). Detección de EPP +
+  estimación de pose humana (YOLOv8n-pose + ByteTrack) para asociar cada EPP a la persona que lo
+  lleva puesto y validar su colocación; máquina de estados de bajo consumo
+  (IDLE/PERSON_CHECK/ACTIVE); episodios con veredicto de cumplimiento por persona y por mano.
+  Publica en la misma nube 2.0.0 (contrato v2, outbox idempotente, UUIDv7) representando cada
+  episodio como una pseudo-detección (`episodio_conforme`/`episodio_no_conforme`) para que el
+  panel lo muestre sin cambios de backend. Detalle completo en `docs/INTEGRACION_NODO_POSE.md` y
+  `edge_pose/CAMBIOS_CESAR.md`.
 
 ### Corregido
 
@@ -80,6 +89,13 @@ Reescritura completa frente a la primera versión de la tesis, siguiendo
 - **S4** — el token ya no viaja en la URL (`?token=`): va como cabecera `Authorization: Bearer`.
 - **C1/C6** — el relay de video ya no reenvía el mismo frame por polling y el servicio tiene un
   techo explícito de instancias (`max-instances=1`).
+- **Índice de Firestore faltante** (2026-10-16) — `/api/devices/{id}/summary` y `/events` daban
+  500 en cuanto una instancia de Cloud Run cacheaba una ventana de eventos y pedía lo nuevo; el
+  índice compuesto `detecciones_confirmadas(device_id asc, end_ts asc)` que esa consulta necesita
+  no existía (el otro índice, descendente, no sirve para una consulta con filtro de rango).
+- **`theme-init.js` con MIME type incorrecto** (2026-10-16) — solo `/assets/` estaba montado como
+  estático; cualquier otro archivo suelto del build (como el script que aplica el tema antes del
+  primer render) caía en el catch-all de la SPA y se servía como `index.html`.
 
 ### Seguridad (incidentes ya resueltos)
 
