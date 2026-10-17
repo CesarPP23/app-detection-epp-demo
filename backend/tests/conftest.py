@@ -135,7 +135,13 @@ def make_env(monkeypatch):
         def audit_actions() -> list[str]:
             import time
 
-            time.sleep(0.15)  # las escrituras de auditoría corren en un hilo
+            # Las escrituras de auditoría corren en una tarea asíncrona (audit.py: no bloquean la
+            # request). En vez de una espera fija (flakeaba bajo carga en CI: el hilo de
+            # asyncio.to_thread a veces tarda más de 150ms), se espera a que Audit._tasks se vacíe
+            # (cada tarea se autoelimina del set al terminar), con un tope de 2s.
+            deadline = time.monotonic() + 2.0
+            while env.audit._tasks and time.monotonic() < deadline:
+                time.sleep(0.01)
             return [d["action"] for d in env.audit_log]
 
         env.login_as, env.seed_events, env.audit_actions = login_as, seed_events, audit_actions
