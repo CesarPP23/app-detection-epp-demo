@@ -196,6 +196,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/devices/{device_id}/training-captures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Training Captures */
+        get: operations["list_training_captures_api_devices__device_id__training_captures_get"];
+        put?: never;
+        /**
+         * Start Training Capture
+         * @description Pide al borde que empiece a subir fotos crudas para reentrenamiento. El reentrenamiento
+         *     en sí se hace en dev, fuera de este sistema; esto solo junta el dataset.
+         */
+        post: operations["start_training_capture_api_devices__device_id__training_captures_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/{device_id}/training-captures/{session_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Training Capture
+         * @description Zip armado al vuelo con las fotos crudas de la sesión. Rol admin: misma sensibilidad que
+         *     `EventDetail.lake_uri` (son fotos de operarios).
+         */
+        get: operations["download_training_capture_api_devices__device_id__training_captures__session_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/devices/{device_id}/training-captures/{session_id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop Training Capture */
+        post: operations["stop_training_capture_api_devices__device_id__training_captures__session_id__stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events/{event_id}": {
         parameters: {
             query?: never;
@@ -595,6 +655,51 @@ export interface components {
             nombre_clase?: string | null;
             /** Previous Nombre Clase */
             previous_nombre_clase?: string | null;
+        };
+        /** TrainingCaptureStarted */
+        TrainingCaptureStarted: {
+            /** Session Id */
+            session_id: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+        };
+        /** TrainingSessionPage */
+        TrainingSessionPage: {
+            /** Items */
+            items: components["schemas"]["TrainingSessionSummary"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** TrainingSessionSummary */
+        TrainingSessionSummary: {
+            /** Closed Reason */
+            closed_reason?: string | null;
+            /** Device Id */
+            device_id: string;
+            /** Ended At */
+            ended_at?: string | null;
+            /**
+             * Frame Count
+             * @default 0
+             */
+            frame_count: number;
+            /** Session Id */
+            session_id: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Started By */
+            started_by: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "capturing" | "completed";
         };
         /** UserCreate */
         UserCreate: {
@@ -1009,6 +1114,133 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Summary"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_training_captures_api_devices__device_id__training_captures_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingSessionPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_training_capture_api_devices__device_id__training_captures_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingCaptureStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_training_capture_api_devices__device_id__training_captures__session_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_training_capture_api_devices__device_id__training_captures__session_id__stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

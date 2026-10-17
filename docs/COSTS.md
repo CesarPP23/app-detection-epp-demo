@@ -82,6 +82,14 @@ sidecar ≈ 2 KB. Con 500 eventos/día: ≈ 100-140 MB/día ≈ **3-4 GB/mes nue
 se cobra. BigQuery: centavos de dólar por mes (los datos son chicos y están particionados por
 fecha, así que el MERGE diario escanea poco).
 
+**Captura para reentrenamiento** (`raw/training_captures/`, agregado 2026-10-17): fotos sueltas a
+1 fps, ≈ 80-150 KB cada una → una sesión de 1 hora (el máximo por la salvaguarda `max_duration_s`
+del borde) son ≈ 3600 fotos ≈ 300-540 MB. A diferencia de `raw/images/`/`raw/thumbs/`, **esta
+carpeta no tiene regla de lifecycle** (ver `docs/DATA_LAKE.md` sección 3): nada la borra sola, así
+que el costo crece con cada sesión que no se baje y se borre a mano (`gsutil -m rm -r`) después de
+etiquetarla. En Standard (sin pasar a Nearline), 10 GB acumulados son **≈ US$0.20/mes** — barato
+por sesión, pero sin tope si se acumulan muchas sesiones sin limpiar.
+
 ## 7. Riesgos residuales de costo (ya mitigados, no eliminados)
 
 - **Un usuario autorizado olvida una pestaña de "En vivo" abierta.** Acotado por el cierre
@@ -93,6 +101,10 @@ fecha, así que el MERGE diario escanea poco).
 - **Alerta de presupuesto por pronóstico** como red de seguridad adicional, pendiente de que el
   usuario la configure (`infra/08_cleanup_billing.sh` recuerda el paso; no se automatiza porque la
   automatización de esto ya fue bloqueada dos veces por el modo seguro de la sesión de trabajo).
+- **Sesiones de captura para reentrenamiento que nadie borra.** Sin lifecycle (a propósito, ver
+  arriba), el único freno es `max_duration_s` (1 hora) por sesión — no hay tope al número de
+  sesiones acumuladas. Mitigación manual: bajar y borrar (`gsutil -m rm -r`) cada sesión después de
+  etiquetarla.
 
 ## 8. Qué queda pendiente de verificar (Fase 10, no hecho en este documento)
 

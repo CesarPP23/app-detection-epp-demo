@@ -5,7 +5,16 @@ import { setupServer } from "msw/node";
 import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, afterEach, beforeAll } from "vitest";
-import type { DeviceStatus, EventPage, Me, Role, Summary, UserOut } from "@/api/types";
+import type {
+  DeviceStatus,
+  EventPage,
+  Me,
+  Role,
+  Summary,
+  TrainingSessionPage,
+  TrainingSessionSummary,
+  UserOut,
+} from "@/api/types";
 import { AuthProvider } from "@/auth/AuthProvider";
 import { DeviceProvider } from "@/components/DeviceContext";
 import { ToastProvider } from "@/components/Toast";
@@ -97,6 +106,25 @@ export const eventsPage = (n = 2): EventPage => ({
   next_cursor: null,
 });
 
+export const trainingSession = (
+  over: Partial<TrainingSessionSummary> = {},
+): TrainingSessionSummary => ({
+  session_id: "raspberry-pi-01-1760000000000",
+  device_id: "raspberry-pi-01",
+  started_at: "2026-10-16T14:00:00Z",
+  started_by: "op@viz-ia.com",
+  ended_at: "2026-10-16T14:10:00Z",
+  frame_count: 600,
+  status: "completed",
+  closed_reason: "stopped_by_operator",
+  ...over,
+});
+
+export const trainingSessionsPage = (items: TrainingSessionSummary[] = []): TrainingSessionPage => ({
+  items,
+  next_cursor: null,
+});
+
 export const user = (over: Partial<UserOut> = {}): UserOut => ({
   email: "ana@viz-ia.com",
   role: "viewer",
@@ -115,6 +143,7 @@ export function baseHandlers(role: Role = "viewer", dev: DeviceStatus = device()
   return [
     http.get("*/api/auth/me", () => json(me(role))),
     http.get("*/api/devices", () => json([dev])),
+    http.get("*/api/devices/:id/training-captures", () => json(trainingSessionsPage())),
   ];
 }
 

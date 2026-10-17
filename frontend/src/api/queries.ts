@@ -18,6 +18,8 @@ import type {
   Role,
   Summary,
   SummaryRange,
+  TrainingCaptureStarted,
+  TrainingSessionPage,
   UserOut,
 } from "./types";
 
@@ -43,6 +45,7 @@ export const INTERVALS = {
   events: 30_000,
   device: 10_000,
   deviceLive: 5_000,
+  trainingCapture: 5_000,
 } as const;
 
 export const keys = {
@@ -53,6 +56,7 @@ export const keys = {
   event: (eventId: string) => ["event", eventId] as const,
   users: ["admin", "users"] as const,
   audit: (q: { action?: string; email?: string }) => ["admin", "audit", q] as const,
+  trainingSessions: (deviceId: string) => ["training-sessions", deviceId] as const,
 };
 
 export function useMe() {
@@ -166,6 +170,46 @@ export function useAudit(filter: { action?: string; email?: string }) {
       get<AuditPage>("/api/admin/audit", { ...filter, cursor: pageParam || undefined }, signal),
     initialPageParam: "",
     getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+}
+
+/** Sesiones de captura de fotos para reentrenamiento (no el reentrenamiento en sí, eso es en dev). */
+export function useTrainingSessions(deviceId: string) {
+  const fast = useRefetchInterval(INTERVALS.trainingCapture);
+  return useInfiniteQuery({
+    queryKey: keys.trainingSessions(deviceId),
+    queryFn: ({ pageParam, signal }) =>
+      get<TrainingSessionPage>(
+        `/api/devices/${deviceId}/training-captures`,
+        { cursor: pageParam || undefined },
+        signal,
+      ),
+    initialPageParam: "",
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+    // sondeo rápido solo mientras haya una sesión en curso; si no, el usuario la inicia a mano.
+    refetchInterval: (query) => {
+      const capturing = query.state.data?.pages[0]?.items.some((s) => s.status === "capturing");
+      return capturing ? fast : false;
+    },
+    enabled: !!deviceId,
+  });
+}
+
+export function useStartTrainingCapture(deviceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api<TrainingCaptureStarted>("POST", `/api/devices/${deviceId}/training-captures`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.trainingSessions(deviceId) }),
+  });
+}
+
+export function useStopTrainingCapture(deviceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sessionId: string) =>
+      api<undefined>("POST", `/api/devices/${deviceId}/training-captures/${sessionId}/stop`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.trainingSessions(deviceId) }),
   });
 }
 

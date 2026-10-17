@@ -119,8 +119,9 @@ no desplegado) sigue teniendo la limitación D9 tal cual está documentada.
 |---|---|---|---|
 | `detecciones_confirmadas` | `{event_id}` | solo la Pi (`Uploader._firestore`, `batch.create`) | contrato v2 completo + `created_at` (`SERVER_TIMESTAMP`) |
 | `daily_stats` | `{device_id}_{YYYY-MM-DD}` | solo la Pi (mismo batch, `merge=True`) | `device_id`, `date`, `events` (`Increment`), `seconds` (`Increment`), `by_class.{nombre_clase}` (`Increment`), `updated_at` |
+| `training_sessions` | `{session_id}` (`{device_id}-{ts_ms}`, lo genera el backend) | el backend la crea (`repo.start_training_capture`); la Pi la actualiza y la cierra (`edge_pose/epp_edge/training_capture.py:CaptureWorker`, `merge=True`) | `device_id`, `session_id`, `started_at`, `started_by`, `frame_count` (`Increment`, cada ~5 s), `status` (`capturing`\|`completed`), `ended_at`, `closed_reason` (`stopped_by_operator`\|`max_duration`) |
 
-Índices compuestos (creados por `infra/04_firestore.sh`, 4 en total):
+Índices compuestos (creados por `infra/04_firestore.sh`, 5 en total):
 - `detecciones_confirmadas`: `device_id ASC, end_ts DESC` (lista general) y
   `device_id ASC, nombre_clase ASC, end_ts DESC` (filtro por clase).
 - `detecciones_confirmadas`: `device_id ASC, end_ts ASC` (agregado 2026-10-16: lo usa
@@ -128,19 +129,23 @@ no desplegado) sigue teniendo la limitación D9 tal cual está documentada.
   panel; Firestore exige dirección exacta por campo en consultas con rango + orden, así que el
   índice `DESC` de la lista general no sirve para esta — faltaba y causaba 500 intermitentes).
 - `daily_stats`: `device_id ASC, date ASC`.
+- `training_sessions`: `device_id ASC, started_at DESC` (mismo motivo que el de `detecciones_confirmadas`
+  de arriba: `repo.py:list_training_sessions` filtra por `device_id` y pagina/ordena por
+  `started_at` descendente — sin el índice, `/api/devices/{id}/training-captures` da 500).
 
 ### `(default)` (control, salud, usuarios, auditoría)
 
 | Colección | Documento | Quién escribe | Campos clave |
 |---|---|---|---|
-| `device_control` | `{device_id}` | solo el backend (`repo.py`: `set_desired_state`, `set_stream_requested`, `renew_lease`) | `desired_state` (`running`\|`stopped`), `stream_requested` (bool), `lease_renewed_at` (`SERVER_TIMESTAMP`), `lease_seconds`, `updated_by`, `updated_at` |
+| `device_control` | `{device_id}` | solo el backend (`repo.py`: `set_desired_state`, `set_stream_requested`, `renew_lease`, `start_training_capture`, `stop_training_capture`) | `desired_state` (`running`\|`stopped`), `stream_requested` (bool), `lease_renewed_at` (`SERVER_TIMESTAMP`), `lease_seconds`, `capture_requested` (bool, toggle persistente, sin lease), `capture_session_id` (lo lee la Pi para saber qué sesión de `training_sessions` abrir/cerrar), `capture_requested_by`, `updated_by`, `updated_at` |
 | `device_health` | `{device_id}` | solo la Pi (`control.HealthReporter`) | `reported_state`, `streaming`, `camera_ok`, `camera_source`, `last_seen` (`SERVER_TIMESTAMP`), `inference_fps`, `inference_ms_p50/p95`, `cpu_temp_c`, `outbox_pending`, `outbox_bytes`, `edge_version`, `model_version` |
 | `dashboard_users` | `{email en minúsculas}` | solo el backend (`routers/admin.py`) | `role` (`viewer`\|`operator`\|`admin`), `active` (bool), `created_by`, `created_at` |
 | `audit_log` | autogenerado (`.add()`) | solo el backend (`audit.py`) | `ts`, `email`, `action`, `target`, `detail`, `expire_at` (TTL de Firestore a 365 días, `infra/04_firestore.sh`) |
 
 Acciones auditadas (`action`): `login`, `login_denied`, `logout` (no se escribe explícitamente hoy;
 la cookie se borra sin más), `desired_state`, `live_start`, `live_end`, `capture_original`,
-`user_create`, `user_update`, `user_delete`.
+`training_capture_start`, `training_capture_stop`, `training_capture_download`, `user_create`,
+`user_update`, `user_delete`.
 
 ### Campos y colecciones obsoletos
 

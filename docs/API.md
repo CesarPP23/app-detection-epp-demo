@@ -47,8 +47,8 @@ cookie es la segunda capa: ni siquiera llega la cookie en una navegación cruzad
 | Rol | Puede |
 |---|---|
 | `viewer` | Ver dispositivos, resumen, eventos, capturas, abrir "En vivo" |
-| `operator` | + pausar/reanudar la detección (`PUT /api/devices/{id}/desired-state`) |
-| `admin` | + administrar usuarios y ver la auditoría; es el único rol que recibe `lake_uri` (la ruta `gs://` cruda) en el detalle de un evento |
+| `operator` | + pausar/reanudar la detección (`PUT /api/devices/{id}/desired-state`), iniciar/detener la captura para reentrenamiento |
+| `admin` | + administrar usuarios, ver la auditoría, descargar el zip de una sesión de captura; es el único rol que recibe `lake_uri` (la ruta `gs://` cruda) en el detalle de un evento |
 
 ### WebSockets del navegador
 
@@ -77,6 +77,10 @@ Todos bajo `/api`, JSON, fechas en ISO-8601 UTC. Rutas tal como están declarada
 | `GET /api/devices/{id}/summary?range=24h\|7d\|30d` | `viewer` | `Summary`: KPIs del periodo y del anterior (para el delta), serie temporal, desglose por clase |
 | `GET /api/devices/{id}/events?cursor=&limit=&clase=&min_conf=&from=&to=&include_simulated=` | `viewer` | `EventPage`: página de `EventSummary` + `next_cursor` opaco (base64 de `end_ts\|event_id`) |
 | `PUT /api/devices/{id}/desired-state` | `operator` | `{state: "running"\|"stopped"}` → `DeviceStatus`; registrado en `audit_log` |
+| `POST /api/devices/{id}/training-captures` | `operator` | Pide al borde que empiece a subir fotos crudas para reentrenamiento → `TrainingCaptureStarted` (`session_id`, `started_at`); registrado en `audit_log` |
+| `POST /api/devices/{id}/training-captures/{session_id}/stop` | `operator` | Pide detener esa sesión (sin efecto si ya no es la activa) → `204`; registrado en `audit_log` |
+| `GET /api/devices/{id}/training-captures?cursor=&limit=` | `viewer` | `TrainingSessionPage`: página de `TrainingSessionSummary` + `next_cursor` |
+| `GET /api/devices/{id}/training-captures/{session_id}/download` | `admin` | Zip (`application/zip`) con las fotos de la sesión, armado al vuelo; `404` si no hay fotos, `400 sesion_demasiado_grande` por encima de `MAX_OBJECTS`; registrado en `audit_log` |
 | `WS /api/devices/{id}/live` | `viewer` | Frames binarios (protocolo en sección 3) + mensajes de texto `{"type":"status","state":"waiting"\|"live"\|"ended"}` |
 | `GET /api/events/{event_id}` | `viewer` | `EventDetail`: contrato v2 completo + `thumb_url`/`original_url` |
 | `GET /api/events/{event_id}/capture?kind=thumb\|original` | `viewer` | `302` a una URL firmada de GCS (v4, 10 min, cacheable 9 min); `kind=original` se audita (`capture_original`) |

@@ -123,6 +123,19 @@ def test_lease_y_pausa():
     assert ctl.should_run()                              # valor inválido -> estado por defecto
 
 
+def test_captura_de_entrenamiento_es_un_toggle_sin_lease():
+    fs = cv.LocalFirestore(Path("/nonexistent"))
+    ctl = cv.DeviceControl(fs, "pi-01")
+    assert not ctl.should_capture() and ctl.capture_session() is None
+    ctl.apply({"capture_requested": True, "capture_session_id": "sess-1"})
+    assert ctl.should_capture() and ctl.capture_session() == "sess-1"
+    # a diferencia del lease de video, no depende del reloj ni de una renovación periódica
+    ctl.apply({"capture_requested": True, "capture_session_id": "sess-1"})
+    assert ctl.should_capture()
+    ctl.apply({"capture_requested": False})
+    assert not ctl.should_capture() and ctl.capture_session() is None
+
+
 def test_protocolo_del_frame_de_video():
     msg = cv.pack_frame(1_760_000_000_123, b"\xff\xd8jpeg")
     assert struct.unpack(">Q", msg[:8])[0] == 1_760_000_000_123 and msg[8:] == b"\xff\xd8jpeg"

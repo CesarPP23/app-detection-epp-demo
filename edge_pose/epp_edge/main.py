@@ -144,7 +144,8 @@ def main() -> int:
         src = cfg["camera"]["source"]
         simulated = isinstance(src, str) and not src.startswith(("rtsp://", "http://", "https://"))
         try:
-            v2 = start_cloud_v2(cfg, BASE_DIR, (BASE_DIR / cfg["storage"]["db_path"]).resolve(), frames, status, simulated)
+            v2 = start_cloud_v2(cfg, BASE_DIR, (BASE_DIR / cfg["storage"]["db_path"]).resolve(), frames, status,
+                               simulated, cam=cam)
         except Exception as e:  # sin credenciales o sin librerías: el nodo sigue y guarda todo en local
             log.error("No se pudo iniciar la nube 2.0.0 (%s); los episodios quedan en la base local", e)
             v2 = None
@@ -194,6 +195,7 @@ def main() -> int:
         if live: live.stop()
         if v2:
             if v2["streamer"]: v2["streamer"].stop()
+            if v2["capture"]: v2["capture"].stop()
             v2["uploader"].stop()
             try:                                  # último intento de vaciar la outbox (máx. ~10 s)
                 t_end = time.time() + 10

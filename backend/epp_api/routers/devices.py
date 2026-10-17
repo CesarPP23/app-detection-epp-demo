@@ -1,7 +1,7 @@
 import asyncio
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 
 from .. import auth, summary
 from ..audit import Audit, get_audit
@@ -16,8 +16,17 @@ from ..schemas import (
     EventSummary,
     Summary,
     SummaryRange,
+    TrainingCaptureStarted,
+    TrainingSessionPage,
+    TrainingSessionSummary,
 )
 from ..settings import settings
+from ..training_captures import (
+    CaptureArchiver,
+    SessionTooLargeError,
+    get_archiver,
+    training_capture_prefix,
+)
 
 router = APIRouter(tags=["devices"])
 
@@ -153,3 +162,83 @@ async def set_desired_state(
     await repo.set_desired_state(device_id, body.state, user.email)
     audit.write(user.email, "desired_state", device_id, body.state)
     return await _status(repo, device_id)
+
+
+def training_session_summary(d: dict) -> TrainingSessionSummary:
+    return TrainingSessionSummary(
+        session_id=d.get("session_id", d.get("id", "")),
+        device_id=d.get("device_id", ""),
+        started_at=d["started_at"],
+        started_by=d.get("started_by", ""),
+        ended_at=d.get("ended_at"),
+        frame_count=d.get("frame_count") or 0,
+        status=d.get("status", "capturing"),  # type: ignore[arg-type]
+        closed_reason=d.get("closed_reason"),
+    )
+
+
+@router.post("/{device_id}/training-captures", response_model=TrainingCaptureStarted)
+async def start_training_capture(
+    device_id: str,
+    user: auth.SessionUser = Depends(auth.require_role("operator")),
+    repo: Repo = Depends(get_repo),
+    audit: Audit = Depends(get_audit),
+):
+    """Pide al borde que empiece a subir fotos crudas para reentrenamiento. El reentrenamiento
+    en sí se hace en dev, fuera de este sistema; esto solo junta el dataset."""
+    _device_or_404(device_id)
+    session_id, started_at = await repo.start_training_capture(device_id, user.email)
+    audit.write(user.email, "training_capture_start", device_id, session_id)
+    return TrainingCaptureStarted(session_id=session_id, started_at=started_at)
+
+
+@router.post("/{device_id}/training-captures/{session_id}/stop", status_code=204)
+async def stop_training_capture(
+    device_id: str,
+    session_id: str,
+    user: auth.SessionUser = Depends(auth.require_role("operator")),
+    repo: Repo = Depends(get_repo),
+    audit: Audit = Depends(get_audit),
+) -> None:
+    _device_or_404(device_id)
+    await repo.stop_training_capture(device_id, session_id, user.email)
+    audit.write(user.email, "training_capture_stop", device_id, session_id)
+
+
+@router.get("/{device_id}/training-captures", response_model=TrainingSessionPage)
+async def list_training_captures(
+    device_id: str,
+    cursor: str | None = None,
+    limit: int = Query(24, ge=1, le=100),
+    _: auth.SessionUser = Depends(auth.require_role("viewer")),
+    repo: Repo = Depends(get_repo),
+):
+    _device_or_404(device_id)
+    items, next_cursor = await repo.list_training_sessions(device_id, cursor, limit)
+    return TrainingSessionPage(items=[training_session_summary(d) for d in items], next_cursor=next_cursor)
+
+
+@router.get("/{device_id}/training-captures/{session_id}/download")
+async def download_training_capture(
+    device_id: str,
+    session_id: str,
+    user: auth.SessionUser = Depends(auth.require_role("admin")),
+    archiver: CaptureArchiver = Depends(get_archiver),
+    audit: Audit = Depends(get_audit),
+):
+    """Zip armado al vuelo con las fotos crudas de la sesión. Rol admin: misma sensibilidad que
+    `EventDetail.lake_uri` (son fotos de operarios)."""
+    _device_or_404(device_id)
+    prefix = training_capture_prefix(device_id, session_id)
+    try:
+        data = await asyncio.to_thread(archiver.build_zip, prefix)
+    except SessionTooLargeError as err:
+        raise ApiError(400, "sesion_demasiado_grande", str(err)) from err
+    except FileNotFoundError as err:
+        raise ApiError(404, "sesion_no_encontrada", "No hay fotos para esa sesión.") from err
+    audit.write(user.email, "training_capture_download", device_id, session_id)
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{session_id}.zip"'},
+    )
