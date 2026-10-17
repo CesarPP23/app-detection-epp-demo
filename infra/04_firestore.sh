@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Fase 4.4 - Firestore: índices compuestos, TTL de audit_log, protección contra borrado, backups semanales.
 # Mutaciones:
-#   - 3 índices compuestos en dbraspberry (eventos por dispositivo/fecha, por clase, daily_stats);
+#   - 4 índices compuestos en dbraspberry (eventos por dispositivo/fecha asc y desc, por clase,
+#     daily_stats);
 #   - TTL sobre el campo expire_at de audit_log en (default);
 #   - delete protection en (default) y dbraspberry;
 #   - un backup semanal (domingo, retención 4 semanas) por base, si aún no existe.
@@ -25,6 +26,16 @@ run_create gcloud firestore indexes composite create --project="$PROJECT" \
   --database="$DETECTIONS_DB" --collection-group=detecciones_confirmadas \
   --field-config=field-path=device_id,order=ascending \
   --field-config=field-path=end_ts,order=descending
+
+# repo.py:_newer_than (ventana incremental) filtra end_ts > fecha y ordena end_ts ascendente: el
+# índice de arriba (descendente) no sirve para esa consulta. Sin este, Firestore devuelve
+# FailedPrecondition en cuanto una instancia de Cloud Run cachea una ventana y pide lo nuevo
+# (detectado el 2026-10-16 al conectar el nodo con pose; antes casi no se disparaba porque cada
+# arranque en frío usa la consulta inicial, que sí tiene índice).
+run_create gcloud firestore indexes composite create --project="$PROJECT" \
+  --database="$DETECTIONS_DB" --collection-group=detecciones_confirmadas \
+  --field-config=field-path=device_id,order=ascending \
+  --field-config=field-path=end_ts,order=ascending
 
 run_create gcloud firestore indexes composite create --project="$PROJECT" \
   --database="$DETECTIONS_DB" --collection-group=detecciones_confirmadas \
