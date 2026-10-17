@@ -318,9 +318,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--regenerate-video", action="store_true", help="regenera el clip sintético aunque ya exista"
     )
-    ap.add_argument(
-        "--export-root", type=Path, default=None, help="default: <carpeta de --weights>/exports"
-    )
+    ap.add_argument("--export-root", type=Path, default=None, help="default: <carpeta de --weights>/exports")
     ap.add_argument(
         "--no-auto-export", action="store_true", help="no exportar a ncnn automáticamente si falta"
     )
@@ -375,9 +373,7 @@ def main(argv: list[str] | None = None) -> int:
                 lat_ms = run_timed(runner, frames, args.warmup, args.iters)
                 stats = latency_stats(lat_ms)
                 map5095 = measure_map5095(model_path_for_map, args.data, size) if args.data else None
-                results.append(
-                    BenchResult(fmt, size, stats.p50_ms, stats.p95_ms, stats.fps, map5095)
-                )
+                results.append(BenchResult(fmt, size, stats.p50_ms, stats.p95_ms, stats.fps, map5095))
             except Exception as e:  # noqa: BLE001 - múltiples causas posibles (torch, pnnx, ncnn, dataset…)
                 print(f"  ERROR en {label}: {e}", file=sys.stderr)
                 results.append(BenchResult(fmt, size, error=str(e)))
