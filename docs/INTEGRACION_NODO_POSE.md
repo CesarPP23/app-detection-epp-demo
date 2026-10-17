@@ -4,6 +4,16 @@
 integró en el nodo, cómo probarlo sin tocar Google Cloud, cómo conectarlo a la nube real y qué conviene
 adaptar del lado de la nube. **Fecha:** 16 de octubre de 2026.
 
+> **Estado 2026-10-16 (Cesar):** este nodo ya está en producción en `raspberry-pi-01`, reemplazando al
+> nodo de una sola clase (`raspberrypi/`), que quedó apagado en esa Pi. Antes de fusionar se revisó
+> `cloud_v2.py`/`state_machine.py` completos y se aplicó un arreglo de robustez — ver
+> `edge_pose/CAMBIOS_CESAR.md` (AS-IS/TO-BE, qué se evaluó y qué no se tocó). La sección 3 de abajo
+> ("Conectarlo a la nube real") ya se ejecutó tal cual con una diferencia: se usó `device.id =
+> raspberry-pi-01` (no `pi-envasado-01`) para reutilizar el dispositivo y las credenciales que ya
+> existían, en vez de dar de alta uno nuevo. La sección 4 ("qué queda pendiente") sigue vigente sin
+> cambios: el detalle de evento con `cumple`/`faltantes`/`mal_colocados` no se pintó en el frontend —
+> decisión explícita de mantener el alcance acotado por ahora.
+
 
 ## 0. Modelos (no se versionan)
 

@@ -81,6 +81,17 @@ parte de `tools/export_model.py` ni de `tools/benchmark.py`, que siguen usando
 
 ### 4.1 El bloqueo: Smart App Control (Windows 11) contra `torch`
 
+> **Actualización 2026-10-16**: en una sesión posterior, en esta misma laptop, instalando
+> `torch==2.14.1+cpu` directo en el entorno global (sin el venv dedicado `.venv-edge/` que se
+> usó al escribir esta sección), `import torch` y la inferencia real con `ultralytics`
+> funcionaron sin ningún bloqueo — se corrieron los dos modelos NCNN de `edge_pose/` (EPP +
+> pose) contra video real sin problema. No se investigó por qué cambió (Smart App Control usa
+> reputación por nube, que puede variar con el tiempo para el mismo archivo; o el venv influye
+> de alguna forma no identificada). **No asumas ninguno de los dos resultados**: antes de dar
+> algo por bloqueado, probar directo (`python -c "import torch; print(torch.__version__)"`) y,
+> si falla, confirmar con el visor de eventos (§4.2 de abajo explica cómo) antes de repetir el
+> diagnóstico de esta sección como si fuera un hecho permanente del entorno.
+
 Esta laptop tiene **Smart App Control** activo
 (`HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy!VerifiedAndReputablePolicyState = 1`), una
 función de Windows 11 que bloquea binarios no firmados o sin reputación —y que **no se
