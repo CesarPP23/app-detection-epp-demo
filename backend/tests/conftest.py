@@ -13,8 +13,9 @@ HDR = {"X-Requested-With": "epp-web"}
 
 # Orden de recarga: cada módulo se importa después de aquello de lo que depende.
 _MODULES = [
-    "settings", "security_headers", "relay", "errors", "schemas", "repo", "audit", "lake", "auth",
-    "summary", "lease", "live", "routers.auth", "routers.devices", "routers.events", "routers.admin", "main",
+    "settings", "security_headers", "relay", "errors", "schemas", "repo", "audit", "lake",
+    "training_captures", "auth", "summary", "lease", "live", "routers.auth", "routers.devices",
+    "routers.events", "routers.admin", "main",
 ]  # fmt: skip
 
 
@@ -107,10 +108,15 @@ def make_env(monkeypatch):
         env.lake = mods["lake"].Lake(
             signer=lambda uri: env.signed.append(uri) or f"https://signed.test/{len(env.signed)}"
         )
+        env.archive_store: dict[str, list[tuple[str, bytes]]] = {}
+        env.archiver = mods["training_captures"].CaptureArchiver(
+            lister=lambda prefix: env.archive_store.get(prefix, [])
+        )
         app = mods["main"].app
         app.dependency_overrides[mods["repo"].get_repo] = lambda: env.repo
         app.dependency_overrides[mods["audit"].get_audit] = lambda: env.audit
         app.dependency_overrides[mods["lake"].get_lake] = lambda: env.lake
+        app.dependency_overrides[mods["training_captures"].get_archiver] = lambda: env.archiver
         mods["audit"]._audit = env.audit  # para audit.write() a nivel de módulo (live.py)
         env.app = app
         env.client = TestClient(app, base_url=BASE)

@@ -27,6 +27,7 @@ DEVICE_CONTROL = "device_control"
 DEVICE_HEALTH = "device_health"
 USERS = "dashboard_users"
 AUDIT = "audit_log"
+TRAINING_SESSIONS = "training_sessions"  # vive en events_db (dbraspberry): la cierra el borde
 
 WINDOW = 500  # eventos recientes por dispositivo que se mantienen en memoria
 STATS_DAYS = 60
@@ -384,6 +385,8 @@ class Repo:
         q = q.order_by("ts", direction=firestore.Query.DESCENDING).limit(size)
         return [{"id": s.id, **(s.to_dict() or {})} for s in q.stream()]
 
+    # --- auditoría ----------------------------------------------------------------------------
+
     async def list_audit(
         self, cursor: str | None, action: str | None, email: str | None, limit: int
     ) -> tuple[list[dict], str | None]:
@@ -408,6 +411,99 @@ class Repo:
         if len(out) > limit:
             page = out[:limit]
             return page, encode_cursor(page[-1]["ts"], page[-1]["id"])
+        return out, None
+
+    # --- captura de fotos para reentrenamiento -------------------------------------------------
+
+    def _write_training_session(self, session_id: str, data: dict, merge: bool = True) -> None:
+        self.events_db.collection(TRAINING_SESSIONS).document(session_id).set(data, merge=merge)
+
+    async def start_training_capture(self, device_id: str, by: str) -> tuple[str, datetime]:
+        """Crea `training_sessions/{session_id}` y pide la captura al borde vía device_control.
+        El borde es quien cierra la sesión (ended_at/frame_count/status) al notar el apagado."""
+        from google.cloud import firestore
+
+        now = self._now()
+        session_id = f"{device_id}-{int(now.timestamp() * 1000)}"
+        await self._run(
+            self._write_training_session,
+            session_id,
+            {
+                "device_id": device_id,
+                "session_id": session_id,
+                "started_at": firestore.SERVER_TIMESTAMP,
+                "started_by": by,
+                "status": "capturing",
+                "frame_count": 0,
+                "ended_at": None,
+                "closed_reason": None,
+            },
+        )
+        await self._run(
+            self._write_control,
+            device_id,
+            {
+                "capture_requested": True,
+                "capture_session_id": session_id,
+                "capture_requested_by": by,
+                "updated_at": firestore.SERVER_TIMESTAMP,
+            },
+        )
+        self._device_docs.pop((DEVICE_CONTROL, device_id), None)
+        return session_id, now
+
+    async def stop_training_capture(self, device_id: str, session_id: str, by: str) -> None:
+        """Solo apaga `capture_requested` si `session_id` sigue siendo la sesión activa — si ya
+        se inició una más nueva, no hace nada (condición de carrera benigna)."""
+        from google.cloud import firestore
+
+        control = await self.get_control(device_id)
+        if control.get("capture_session_id") != session_id:
+            return
+        await self._run(
+            self._write_control,
+            device_id,
+            {
+                "capture_requested": False,
+                "capture_requested_by": by,
+                "updated_at": firestore.SERVER_TIMESTAMP,
+            },
+        )
+        self._device_docs.pop((DEVICE_CONTROL, device_id), None)
+
+    def _training_sessions_batch(self, device_id: str, upper: datetime | None, size: int) -> list[dict]:
+        from google.cloud import firestore
+        from google.cloud.firestore_v1.base_query import FieldFilter
+
+        q = self.events_db.collection(TRAINING_SESSIONS).where(
+            filter=FieldFilter("device_id", "==", device_id)
+        )
+        if upper:
+            q = q.where(filter=FieldFilter("started_at", "<=", upper))
+        q = q.order_by("started_at", direction=firestore.Query.DESCENDING).limit(size)
+        return [{"id": s.id, **(s.to_dict() or {})} for s in q.stream()]
+
+    async def list_training_sessions(
+        self, device_id: str, cursor: str | None, limit: int
+    ) -> tuple[list[dict], str | None]:
+        """Clon de list_audit: son pocas sesiones por dispositivo, no hace falta la ventana
+        incremental de list_events."""
+        cur_dt, cur_id = decode_cursor(cursor) if cursor else (None, None)
+        upper = cur_dt
+        out: list[dict] = []
+        batch = max(limit * 2, 20)
+        for _ in range(_MAX_SCAN_BATCHES):
+            docs = await self._run(self._training_sessions_batch, device_id, upper, batch)
+            for d in docs:
+                if cur_dt is not None and (d["started_at"], d["id"]) >= (cur_dt, cur_id):
+                    continue
+                out.append(d)
+            if len(docs) < batch or len(out) > limit:
+                break
+            upper, cur_dt, cur_id = docs[-1]["started_at"], docs[-1]["started_at"], docs[-1]["id"]
+        if len(out) > limit:
+            page = out[:limit]
+            return page, encode_cursor(page[-1]["started_at"], page[-1]["id"])
         return out, None
 
 

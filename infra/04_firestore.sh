@@ -48,6 +48,15 @@ run_create gcloud firestore indexes composite create --project="$PROJECT" \
   --field-config=field-path=device_id,order=ascending \
   --field-config=field-path=date,order=ascending
 
+# repo.py:list_training_sessions filtra device_id (igualdad) y pagina/ordena por started_at
+# descendente (misma dirección siempre, una sola consulta) — sin este índice, Firestore devuelve
+# FailedPrecondition en /api/devices/{id}/training-captures, mismo síntoma que el índice de
+# detecciones_confirmadas de arriba.
+run_create gcloud firestore indexes composite create --project="$PROJECT" \
+  --database="$DETECTIONS_DB" --collection-group=training_sessions \
+  --field-config=field-path=device_id,order=ascending \
+  --field-config=field-path=started_at,order=descending
+
 log "TTL de audit_log (campo expire_at) en $CONTROL_DB"
 run gcloud firestore fields ttls update expire_at --project="$PROJECT" \
   --collection-group=audit_log --enable-ttl --database="$CONTROL_DB"
