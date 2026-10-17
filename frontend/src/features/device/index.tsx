@@ -1,8 +1,22 @@
-import { AlertCircle, AlertTriangle, CheckCircle2, Info, type LucideIcon } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Camera,
+  CheckCircle2,
+  Download,
+  Info,
+  Square,
+  type LucideIcon,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ApiError } from "@/api/client";
-import { useSetDesiredState } from "@/api/queries";
-import type { DeviceStatus } from "@/api/types";
+import {
+  useSetDesiredState,
+  useStartTrainingCapture,
+  useStopTrainingCapture,
+  useTrainingSessions,
+} from "@/api/queries";
+import type { DeviceStatus, TrainingSessionSummary } from "@/api/types";
 import { hasRole, useAuth } from "@/auth/AuthProvider";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useDevice } from "@/components/DeviceContext";
@@ -13,6 +27,7 @@ import { StatusPill } from "@/components/StatusPill";
 import { useToast } from "@/components/Toast";
 import {
   formatDateTime,
+  formatDuration,
   formatInt,
   formatLatency,
   formatRelative,
@@ -167,6 +182,199 @@ function Controls({ d }: { d: DeviceStatus }) {
   );
 }
 
+const CLOSED_REASON_LABEL: Record<string, string> = {
+  stopped_by_operator: "Detenida",
+  max_duration: "Se cortó sola tras 1 hora",
+};
+
+function TrainingCaptureControl({
+  deviceId,
+  active,
+}: {
+  deviceId: string;
+  active: TrainingSessionSummary | undefined;
+}) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const start = useStartTrainingCapture(deviceId);
+  const stop = useStopTrainingCapture(deviceId);
+  const [open, setOpen] = useState(false);
+
+  if (!hasRole(user?.role, "operator")) {
+    return (
+      <p className="text-sm text-ink-2">
+        Solo operadores y administradores pueden iniciar o detener la captura.
+      </p>
+    );
+  }
+
+  if (active) {
+    const confirm = () =>
+      stop.mutate(active.session_id, {
+        onSuccess: () => {
+          setOpen(false);
+          toast("Captura detenida", "success");
+        },
+        onError: (e) => {
+          setOpen(false);
+          toast(e instanceof ApiError ? e.message : "No se pudo detener la captura.", "error");
+        },
+      });
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-control border border-line bg-surface-2 px-4 text-sm font-medium text-ink hover:bg-surface-1"
+        >
+          <Square aria-hidden className="size-4" /> Detener captura
+        </button>
+        <ConfirmDialog
+          open={open}
+          onOpenChange={setOpen}
+          title="Detener la captura"
+          description="Se deja de subir fotos nuevas de esta sesión. Las que ya se subieron quedan disponibles para descargar."
+          confirmLabel="Detener"
+          busy={stop.isPending}
+          onConfirm={confirm}
+        />
+      </>
+    );
+  }
+
+  const confirm = () =>
+    start.mutate(undefined, {
+      onSuccess: () => {
+        setOpen(false);
+        toast("Captura iniciada: la cámara empieza a subir fotos para reentrenamiento", "success");
+      },
+      onError: (e) => {
+        setOpen(false);
+        toast(e instanceof ApiError ? e.message : "No se pudo iniciar la captura.", "error");
+      },
+    });
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-control border border-line bg-surface-2 px-4 text-sm font-medium text-ink hover:bg-surface-1"
+      >
+        <Camera aria-hidden className="size-4" /> Capturar fotos para reentrenamiento
+      </button>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Iniciar captura para reentrenamiento"
+        description="La cámara empieza a subir fotos sueltas (sin anotar) a la nube, hasta que la detengas o pase 1 hora. No afecta la detección en curso."
+        confirmLabel="Iniciar"
+        busy={start.isPending}
+        onConfirm={confirm}
+      />
+    </>
+  );
+}
+
+function TrainingSessionRow({ s, deviceId }: { s: TrainingSessionSummary; deviceId: string }) {
+  const { user } = useAuth();
+  const canDownload = hasRole(user?.role, "admin") && s.status === "completed" && s.frame_count > 0;
+  const ended = s.ended_at ? new Date(s.ended_at) : new Date();
+  const seconds = Math.max(0, Math.round((ended.getTime() - new Date(s.started_at).getTime()) / 1000));
+  return (
+    <tr className="border-t border-line">
+      <th scope="row" className="px-3 py-2 text-left font-normal text-ink">
+        {formatDateTime(s.started_at)}
+      </th>
+      <td className="px-3 py-2 text-ink-2">
+        {s.status === "capturing" ? "Capturando…" : (CLOSED_REASON_LABEL[s.closed_reason ?? ""] ?? "Completa")}
+      </td>
+      <td className="px-3 py-2 text-ink">{formatDuration(seconds)}</td>
+      <td className="px-3 py-2 text-ink">{formatInt(s.frame_count)} fotos</td>
+      <td className="px-3 py-2 text-right">
+        {canDownload && (
+          <a
+            href={`/api/devices/${deviceId}/training-captures/${s.session_id}/download`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-control border border-line bg-surface-2 px-3 text-sm text-ink md:min-h-9"
+          >
+            <Download aria-hidden className="size-4" /> Descargar
+          </a>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function TrainingCaptureSection({ deviceId }: { deviceId: string }) {
+  const sessions = useTrainingSessions(deviceId);
+  const items = sessions.data?.pages.flatMap((p) => p.items) ?? [];
+  const active = items.find((s) => s.status === "capturing");
+
+  return (
+    <section
+      aria-labelledby="training-capture"
+      className="rounded-card border border-line bg-surface-1 p-4"
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 id="training-capture" className="text-base font-semibold text-ink">
+          Captura para reentrenamiento
+        </h2>
+        <span className="ml-auto">
+          <TrainingCaptureControl deviceId={deviceId} active={active} />
+        </span>
+      </div>
+      {sessions.isPending ? (
+        <Skeleton className="mt-3 h-11" label="Cargando sesiones de captura" />
+      ) : sessions.isError ? (
+        <QueryErrorState error={null} onRetry={() => void sessions.refetch()} />
+      ) : items.length === 0 ? (
+        <p className="mt-3 text-sm text-ink-2">Todavía no se capturó ninguna sesión.</p>
+      ) : (
+        <>
+          <div className="relative mt-3 overflow-x-auto rounded-card border border-line">
+            <table className="tabular w-full text-sm">
+              <caption className="sr-only">Sesiones de captura para reentrenamiento</caption>
+              <thead className="bg-surface-2 text-left text-ink-2">
+                <tr>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Inicio
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Estado
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Duración
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium">
+                    Fotos
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((s) => (
+                  <TrainingSessionRow key={s.session_id} s={s} deviceId={deviceId} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {sessions.hasNextPage && (
+            <button
+              type="button"
+              disabled={sessions.isFetchingNextPage}
+              onClick={() => void sessions.fetchNextPage()}
+              className="mt-3 min-h-11 rounded-control border border-line bg-surface-2 px-4 text-sm font-medium text-ink"
+            >
+              {sessions.isFetchingNextPage ? "Cargando…" : "Cargar más"}
+            </button>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 export default function DevicePage() {
   const dev = useDevice();
   const d = dev.device;
@@ -233,6 +441,7 @@ export default function DevicePage() {
           </section>
         )}
         <Cards d={d} />
+        <TrainingCaptureSection deviceId={d.id} />
       </>
     );
   }

@@ -11,6 +11,8 @@ import {
   renderScreen,
   server,
   installMockServer,
+  trainingSession,
+  trainingSessionsPage,
 } from "@/test/c2a-utils";
 import { diagnostics, outboxTone, tempTone } from "./health";
 import DevicePage from ".";
@@ -34,7 +36,7 @@ describe("DevicePage", () => {
   it("viewer no ve el botón de pausar", async () => {
     server.use(...baseHandlers("viewer"));
     renderScreen(<DevicePage />);
-    expect(await screen.findByText(/Solo operadores y administradores/)).toBeInTheDocument();
+    expect(await screen.findByText(/pausar o reanudar la detección/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pausar detección" })).toBeNull();
   });
 
@@ -145,6 +147,84 @@ describe("DevicePage", () => {
     expect(await screen.findByText("No se pudo cargar el dispositivo")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(await screen.findByText("Detectando")).toBeInTheDocument();
+  });
+});
+
+describe("Captura para reentrenamiento", () => {
+  it("viewer no ve el botón de iniciar ni el link de descarga", async () => {
+    server.use(
+      http.get("*/api/devices/:id/training-captures", () =>
+        json(trainingSessionsPage([trainingSession()])),
+      ),
+      ...baseHandlers("viewer"),
+    );
+    renderScreen(<DevicePage />);
+    expect(
+      await screen.findByText(/iniciar o detener la captura/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Descargar/ })).toBeNull();
+  });
+
+  it("operador inicia una captura con confirmación y se avisa con un toast", async () => {
+    let called = false;
+    server.use(
+      ...baseHandlers("operator"),
+      http.post("*/api/devices/:id/training-captures", () => {
+        called = true;
+        return json({ session_id: "raspberry-pi-01-123", started_at: "2026-10-16T14:00:00Z" });
+      }),
+    );
+    renderScreen(<DevicePage />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Capturar fotos para reentrenamiento/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Iniciar" }));
+    await waitFor(() => expect(called).toBe(true));
+    expect(
+      await screen.findByText("Captura iniciada: la cámara empieza a subir fotos para reentrenamiento"),
+    ).toBeInTheDocument();
+  });
+
+  it("con una sesión activa muestra «Detener captura» en vez de «Iniciar»", async () => {
+    server.use(
+      http.get("*/api/devices/:id/training-captures", () =>
+        json(trainingSessionsPage([trainingSession({ status: "capturing", ended_at: null })])),
+      ),
+      ...baseHandlers("operator"),
+    );
+    renderScreen(<DevicePage />);
+    expect(await screen.findByRole("button", { name: /Detener captura/ })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Capturar fotos para reentrenamiento/ }),
+    ).toBeNull();
+  });
+
+  it("admin ve el link de descarga de una sesión completa", async () => {
+    server.use(
+      http.get("*/api/devices/:id/training-captures", () =>
+        json(trainingSessionsPage([trainingSession()])),
+      ),
+      ...baseHandlers("admin"),
+    );
+    renderScreen(<DevicePage />);
+    const link = await screen.findByRole("link", { name: /Descargar/ });
+    expect(link).toHaveAttribute(
+      "href",
+      "/api/devices/raspberry-pi-01/training-captures/raspberry-pi-01-1760000000000/download",
+    );
+  });
+
+  it("operador no ve el link de descarga de esa misma sesión", async () => {
+    server.use(
+      http.get("*/api/devices/:id/training-captures", () =>
+        json(trainingSessionsPage([trainingSession()])),
+      ),
+      ...baseHandlers("operator"),
+    );
+    renderScreen(<DevicePage />);
+    expect(await screen.findByText(/600 fotos/)).toBeInTheDocument(); // la fila cargó
+    expect(screen.queryByRole("link", { name: /Descargar/ })).toBeNull();
   });
 });
 

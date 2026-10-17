@@ -16,6 +16,9 @@ export type DetectionBox = S["DetectionBox"];
 export type UserOut = S["UserOut"];
 export type AuditEntry = S["AuditEntry"];
 export type AuditPage = S["AuditPage"];
+export type TrainingSessionSummary = S["TrainingSessionSummary"];
+export type TrainingSessionPage = S["TrainingSessionPage"];
+export type TrainingCaptureStarted = S["TrainingCaptureStarted"];
 
 export type EventsQuery = NonNullable<
   operations["device_events_api_devices__device_id__events_get"]["parameters"]["query"]
