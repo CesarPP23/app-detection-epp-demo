@@ -1035,7 +1035,8 @@ python-dotenv
 - [ ] Simulación en la PC (`CAMERA_SOURCE=file:media/prueba1.mp4`, `ALLOW_TEST_VIDEO=true`): por
       cada evento hay en el lake `raw/images/.../{event_id}.jpg`, `raw/thumbs/.../{event_id}.jpg`
       y `raw/events/.../{event_id}.json`, y en Firestore el documento `{event_id}` con
-      `is_simulated=true`, `capture_uri` y `thumb_uri`.
+      `is_simulated=true`, `capture.uri` y `capture.thumb_uri` (campos anidados dentro de
+      `capture`, no planos — ver el contrato v2 en 7.3).
 - [ ] Sin lease: cero conexiones a Cloud Run.
 - [ ] `Ctrl+C` con una sesión abierta → evento con `closed_reason="shutdown"` y su captura.
 - [ ] Sin red durante 3 eventos → `outbox_pending=3`; al volver la red se suben, sin duplicados.
@@ -1624,7 +1625,7 @@ gcloud storage buckets add-iam-policy-binding gs://epp-detection-v1-lake \
 
 Nearline tiene una duración mínima de 30 días: pasar a Nearline el día 30 y borrar el día 60 la
 cumple exactamente, sin cargo por borrado anticipado. Cuando una imagen se borra, su evento y su
-JSON se conservan con `capture_uri` apuntando a un objeto que ya no existe: la API debe responder
+JSON se conservan con `capture.uri` apuntando a un objeto que ya no existe: la API debe responder
 `capture_status = "expired"` (calculado: `end_ts` hace más de 60 días) y la UI mostrar
 "Captura eliminada por política de retención (60 días)", no un error. Agregar
 `LAKE_IMAGE_RETENTION_DAYS=60` a la configuración del backend.
