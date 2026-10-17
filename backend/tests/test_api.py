@@ -342,7 +342,7 @@ def test_resumen_7d_usa_daily_stats_con_periodo_anterior(env):
     assert len(s["series"]) == 7 and all(b["total"] == 10 for b in s["series"])
     assert s["by_class"][0] == {"nombre_clase": "hairnet", "count": 42}
     assert s["kpis"]["avg_confidence"]["value"] == pytest.approx(0.85)
-    assert s["kpis"]["capture_coverage"]["value"] == 100.0
+    assert s["kpis"]["capture_coverage"]["value"] == 1.0
     assert s["partial"] is False and s["sample"]["events"] == 4
 
 
