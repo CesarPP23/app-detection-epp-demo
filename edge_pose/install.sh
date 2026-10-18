@@ -29,7 +29,11 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
 echo "== [2/5] Copiando paquete a $DEST =="
 if [ "$SRC_DIR" != "$DEST" ]; then
   mkdir -p "$DEST"
-  rsync -a --delete --exclude '.venv' --exclude 'data' --exclude 'secrets' "$SRC_DIR/" "$DEST/"
+  RSYNC_EXTRA=()
+  # en una reinstalacion (no la primera vez) config.yaml ya tiene los valores reales del dispositivo
+  # (device.id, orchestrator_host, etc.); no pisarlo con la plantilla del repo.
+  [ -f "$DEST/epp_edge/config.yaml" ] && RSYNC_EXTRA+=(--exclude 'epp_edge/config.yaml')
+  rsync -a --delete --exclude '.venv' --exclude 'data' --exclude 'secrets' "${RSYNC_EXTRA[@]}" "$SRC_DIR/" "$DEST/"
 fi
 mkdir -p "$DEST/data" "$DEST/secrets" "$DEST/data/.yolo"
 cd "$DEST"
