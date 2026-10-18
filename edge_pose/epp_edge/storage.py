@@ -30,8 +30,8 @@ CREATE TABLE IF NOT EXISTS episodios (
     duracion_s    REAL,
     frames        INTEGER DEFAULT 0,
     personas_max  INTEGER DEFAULT 1,
-    ratio_gorra   REAL, ratio_guante REAL, ratio_mascarilla REAL,
-    conf_gorra    REAL, conf_guante  REAL, conf_mascarilla  REAL,
+    ratio_cofia   REAL, ratio_guante REAL, ratio_mascarilla REAL,
+    conf_cofia    REAL, conf_guante  REAL, conf_mascarilla  REAL,
     cumple        INTEGER,                   -- 1 si todos los EPP requeridos superan el umbral
     faltantes     TEXT,                      -- JSON lista de EPP no detectados
     snapshot      TEXT,                      -- ruta local del JPEG anotado (mejor frame)
@@ -48,10 +48,10 @@ CREATE TABLE IF NOT EXISTS muestras (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     episodio_id TEXT NOT NULL REFERENCES episodios(id) ON DELETE CASCADE,
     ts          TEXT NOT NULL,
-    gorra       INTEGER, guante INTEGER, mascarilla INTEGER,   -- conteos en el frame
+    cofia       INTEGER, guante INTEGER, mascarilla INTEGER,   -- conteos en el frame
     personas    INTEGER,
     detecciones TEXT,                                           -- JSON [[label,conf,x1,y1,x2,y2],...]
-    estados     TEXT                                            -- JSON {"P1": {"Gorra":"ok",...}}
+    estados     TEXT                                            -- JSON {"P1": {"Cofia":"ok",...}}
 );
 CREATE TABLE IF NOT EXISTS cola_sync (
     episodio_id TEXT PRIMARY KEY REFERENCES episodios(id) ON DELETE CASCADE,
@@ -87,8 +87,11 @@ class Storage:
                               "personas": "TEXT", "clip": "TEXT",
                               # nube 2.0.0: frame original del mejor momento, sus cajas y confianzas del episodio
                               "snapshot_raw": "TEXT", "best_dets": "TEXT", "best_ts": "TEXT",
-                              "conf_mean": "REAL", "conf_max": "REAL", "closed_reason": "TEXT"},
-                "muestras": {"estados": "TEXT"}}
+                              "conf_mean": "REAL", "conf_max": "REAL", "closed_reason": "TEXT",
+                              # modelo nuevo: la clase "Gorra" pasó a llamarse "Cofia" (bases ya creadas conservan
+                              # ratio_gorra/conf_gorra sin usar; no se borran, SQLite no soporta DROP COLUMN fácil)
+                              "ratio_cofia": "REAL", "conf_cofia": "REAL"},
+                "muestras": {"estados": "TEXT", "cofia": "INTEGER"}}
         for table, cols in want.items():
             have = {r["name"] for r in self._conn.execute(f"PRAGMA table_info({table})")}
             for c, t in cols.items():
@@ -107,14 +110,14 @@ class Storage:
                    estados: Optional[dict] = None) -> None:
         with self._lock:
             self._conn.execute(
-                "INSERT INTO muestras(episodio_id, ts, gorra, guante, mascarilla, personas, detecciones, estados) VALUES (?,?,?,?,?,?,?,?)",
-                (episode_id, ts, counts.get("Gorra", 0), counts.get("Guante", 0), counts.get("Mascarilla", 0),
+                "INSERT INTO muestras(episodio_id, ts, cofia, guante, mascarilla, personas, detecciones, estados) VALUES (?,?,?,?,?,?,?,?)",
+                (episode_id, ts, counts.get("Cofia", 0), counts.get("Guante", 0), counts.get("Mascarilla", 0),
                  personas, json.dumps(dets), json.dumps(estados or {}, ensure_ascii=False)),
             )
 
     def close_episode(self, episode_id: str, data: dict[str, Any]) -> None:
-        cols = ["ts_fin", "duracion_s", "frames", "personas_max", "ratio_gorra", "ratio_guante", "ratio_mascarilla",
-                "conf_gorra", "conf_guante", "conf_mascarilla", "cumple", "faltantes", "snapshot", "epp_fps",
+        cols = ["ts_fin", "duracion_s", "frames", "personas_max", "ratio_cofia", "ratio_guante", "ratio_mascarilla",
+                "conf_cofia", "conf_guante", "conf_mascarilla", "cumple", "faltantes", "snapshot", "epp_fps",
                 "mal_colocados", "no_evaluables", "n_personas", "personas", "clip",
                 "snapshot_raw", "best_dets", "best_ts", "conf_mean", "conf_max", "closed_reason"]
         sets = ", ".join(f"{c}=?" for c in cols)
@@ -134,7 +137,7 @@ class Storage:
 
     def get_samples(self, episode_id: str) -> list[dict]:
         with self._lock:
-            rows = self._conn.execute("SELECT ts, gorra, guante, mascarilla, personas, estados FROM muestras WHERE episodio_id=? ORDER BY ts",
+            rows = self._conn.execute("SELECT ts, cofia, guante, mascarilla, personas, estados FROM muestras WHERE episodio_id=? ORDER BY ts",
                                       (episode_id,)).fetchall()
         out = []
         for r in rows:

@@ -24,10 +24,10 @@ def _episode(storage: Storage, tmp: Path, ep_id="pi-01-1", cumple=1, ts="2026-10
     end = (datetime.fromisoformat(ts) + timedelta(seconds=12)).isoformat()
     storage.close_episode(ep_id, {
         "ts_fin": end, "duracion_s": 12.0, "frames": 60, "personas_max": 1, "cumple": cumple,
-        "ratio_gorra": 1.0, "ratio_guante": 0.8, "ratio_mascarilla": 0.9,
+        "ratio_cofia": 1.0, "ratio_guante": 0.8, "ratio_mascarilla": 0.9,
         "faltantes": [] if cumple else ["Guante"], "mal_colocados": [], "no_evaluables": [], "n_personas": 1,
         "personas": [{"id": 1, "cumple": bool(cumple)}], "snapshot": str(ann), "snapshot_raw": str(raw),
-        "best_dets": [{"clase_id": 0, "nombre_clase": "Gorra", "confianza": 0.91, "bbox_xyxy_norm": [0.4, 0.1, 0.5, 0.2],
+        "best_dets": [{"clase_id": 0, "nombre_clase": "Cofia", "confianza": 0.91, "bbox_xyxy_norm": [0.4, 0.1, 0.5, 0.2],
                        "img_w": 640, "img_h": 480}],
         "best_ts": end, "conf_mean": 0.85, "conf_max": 0.91, "closed_reason": "gap"})
     return ep_id

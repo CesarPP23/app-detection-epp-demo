@@ -49,7 +49,7 @@ EVENTS_COLLECTION = "detecciones_confirmadas"
 STATS_COLLECTION = "daily_stats"
 CONTROL_COLLECTION = "device_control"
 HEALTH_COLLECTION = "device_health"
-CLASS_IDS = {"Gorra": 0, "Guante": 1, "Mascarilla": 2}
+CLASS_IDS = {"Cofia": 0, "Guante": 1, "Mascarilla": 2}
 EPISODE_CLASS = {True: (100, "episodio_conforme"), False: (101, "episodio_no_conforme")}
 STAGES = ("images", "sidecar", "firestore", "done")
 
@@ -169,7 +169,7 @@ def build_event(ep: dict, event_id: str, *, edge: dict, is_simulated: bool, thum
         "personas_max": int(ep.get("personas_max") or 0),
         "n_personas": int(ep.get("n_personas") or 0),
         "personas": _json_list(ep.get("personas")),
-        "ratios": {"gorra": ep.get("ratio_gorra"), "guante": ep.get("ratio_guante"),
+        "ratios": {"cofia": ep.get("ratio_cofia"), "guante": ep.get("ratio_guante"),
                    "mascarilla": ep.get("ratio_mascarilla")},
         "epp_fps": ep.get("epp_fps"),
         "episodio_local_id": ep["id"],

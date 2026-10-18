@@ -85,7 +85,7 @@ se disfraza de detección:
 - `clase_id` / `nombre_clase` = `100` / `"episodio_conforme"` si todas las personas cumplen,
   `101` / `"episodio_no_conforme"` si alguna no — así `daily_stats.by_class` y los gráficos por
   clase del panel lo cuentan sin cambios de código (`EPISODE_CLASS` en `cloud_v2.py`).
-- `detections_at_capture` trae las cajas de Gorra/Guante/Mascarilla del frame de mejor confianza
+- `detections_at_capture` trae las cajas de Cofia/Guante/Mascarilla del frame de mejor confianza
   (igual que en el contrato de un solo modelo), para que el visor de cajas del panel siga
   funcionando igual.
 - Los campos propios del episodio viajan **además** de los de arriba; la API y el panel los
@@ -102,7 +102,7 @@ se disfraza de detección:
 | `personas_max` | int | Máximo de personas simultáneas vistas durante el episodio. |
 | `n_personas` | int | Personas distintas (por id de ByteTrack) evaluadas en el episodio. |
 | `personas` | array\<object\> | Detalle por persona (id de tracking, veredicto, EPP evaluado) — ver `edge_pose/epp_edge/state_machine.py::PersonStats`. |
-| `ratios.{gorra,guante,mascarilla}` | float [0-1] \| null | Fracción de frames evaluables en los que esa prenda estuvo bien puesta, por tipo de EPP, agregado de todas las personas. |
+| `ratios.{cofia,guante,mascarilla}` | float [0-1] \| null | Fracción de frames evaluables en los que esa prenda estuvo bien puesta, por tipo de EPP, agregado de todas las personas. |
 | `epp_fps` | float \| null | FPS real del modelo de EPP durante el episodio (puede ser menor que el nominal si `ACTIVE` compite por CPU con `Pose`). |
 | `episodio_local_id` | int | ID autoincremental de la fila en la SQLite local del nodo (`epp_edge.db`), para correlación con logs del dispositivo. |
 

@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data" / "epp_v3" / "data.yaml"
 RUNS = ROOT / "runs"
 OUT = RUNS / "eval"
-CLASSES = ["Gorra", "Guante", "Mascarilla"]
+CLASSES = ["Cofia", "Guante", "Mascarilla"]
 
 
 def evaluate(weights: Path | str, name: str, split: str, imgsz: int, device) -> dict:

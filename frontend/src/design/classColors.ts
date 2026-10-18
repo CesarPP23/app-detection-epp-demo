@@ -10,7 +10,7 @@ export const CLASS_LABELS: Record<string, string> = {
   face_mask: "Mascarilla",
   latex_gloves: "Guantes de látex",
   // Nodo con pose (edge_pose/): clases del modelo propio y veredicto por episodio
-  Gorra: "Cofia",
+  Cofia: "Cofia",
   Guante: "Guantes",
   Mascarilla: "Mascarilla",
   episodio_conforme: "Cumple EPP",

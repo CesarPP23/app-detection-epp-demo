@@ -1,6 +1,6 @@
 """
 Prepara el dataset de entrenamiento a partir de la exportación de Roboflow
-"Deteccion de EPPs v2 - v3" (3 clases: Gorra, Guante, Mascarilla).
+"Deteccion de EPPs v2 - v3" (3 clases: Cofia, Guante, Mascarilla).
 
 Qué hace:
   1. Copia el dataset a training/data/epp_v3/ (no toca la carpeta original).
@@ -29,7 +29,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT.parent.parent / "05 Datasets" / "Deteccion de EPPs YOLOv8 (Roboflow)"
 DST = ROOT / "data" / "epp_v3"
-CLASSES = ["Gorra", "Guante", "Mascarilla"]
+CLASSES = ["Cofia", "Guante", "Mascarilla"]
 SPLITS = ["train", "valid", "test"]
 
 

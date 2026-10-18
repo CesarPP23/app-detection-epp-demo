@@ -38,7 +38,7 @@ ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
 BASE = DATA / "epp_v3"
 OUT = ROOT / "runs" / "robustez"
-CLASSES = ["Gorra", "Guante", "Mascarilla"]
+CLASSES = ["Cofia", "Guante", "Mascarilla"]
 
 # Escenas (grupos con separación > 10 s entre fotos consecutivas; ver data/groups_epp_v3.json)
 SCENE_SPLIT = {"test": {2, 6, 13, 14}, "valid": {5, 8, 11, 12}}

@@ -44,8 +44,8 @@ epp:                             # Etapa 2: detección de EPP (modelo propio, NC
   conf: 0.40                     # confianza alta: la detección se acepta en cualquier posición
   conf_low: 0.25                 # confianza baja: solo se acepta si cae donde la pose la espera (guante junto a la muñeca, etc.)
   iou: 0.5
-  classes: ["Gorra", "Guante", "Mascarilla"]
-  required: ["Gorra", "Guante", "Mascarilla"]   # EPP obligatorios en la zona
+  classes: ["Cofia", "Guante", "Mascarilla"]
+  required: ["Cofia", "Guante", "Mascarilla"]   # EPP obligatorios en la zona
   compliance_ratio: 0.60         # EPP usado correctamente en >= 60 % de los frames EVALUABLES de la persona
   min_eval_frames: 5             # frames evaluables mínimos por EPP para emitir veredicto (si no, "no evaluable")
   min_person_frames: 5           # personas con menos frames se ignoran (paso fugaz por la zona)
@@ -76,7 +76,7 @@ alerts:
   gpio_seconds: 10
 
 privacy:
-  blur_faces: false              # difumina la región de la cabeza en snapshots/stream (usa la caja de Gorra/Mascarilla)
+  blur_faces: false              # difumina la región de la cabeza en snapshots/stream (usa la caja de Cofia/Mascarilla)
 
 storage:
   db_path: "../data/epp_edge.sqlite"
