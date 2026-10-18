@@ -5,7 +5,7 @@ para producción, en un solo comando:
     python pipeline.py --src "carpeta_export_roboflow" --name epp_v4 --models yolov8n yolo11n --epochs 100
 
 Pasos (cada uno se puede saltar con --skip-<paso>):
-  1. prepare : valida la exportación de Roboflow (clases Gorra/Guante/Mascarilla, integridad) y la
+  1. prepare : valida la exportación de Roboflow (clases Cofia/Guante/Mascarilla, integridad) y la
                re-particiona (imágenes aumentadas solo en train)             -> data/<name>/
   2. train   : entrena los modelos indicados por transferencia (pesos COCO)  -> runs/<modelo>_<name>/
   3. evaluate: métricas en TEST de los runs nuevos                           -> runs/eval_<name>/
@@ -126,12 +126,12 @@ def main() -> None:
         for e in eps:
             personas = json.loads(e.get("personas") or "[]")
             print(f"  {e['id']}: cumple={bool(e['cumple'])} faltantes={e.get('faltantes')} mal={e.get('mal_colocados')} "
-                  f"gorra={e.get('ratio_gorra')} guante={e.get('ratio_guante')} mascarilla={e.get('ratio_mascarilla')} "
+                  f"cofia={e.get('ratio_cofia')} guante={e.get('ratio_guante')} mascarilla={e.get('ratio_mascarilla')} "
                   f"manos={[p.get('manos') for p in personas]}")
 
     summary = {"name": args.name, "src": args.src, "best_run": best_run, "metrics": best,
                "edge_model": model_dir, "regression": [{k: e.get(k) for k in ("id", "cumple", "faltantes", "mal_colocados",
-                                                                              "ratio_gorra", "ratio_guante", "ratio_mascarilla")} for e in eps]}
+                                                                              "ratio_cofia", "ratio_guante", "ratio_mascarilla")} for e in eps]}
     out = ROOT / "runs" / f"pipeline_{args.name}.json"
     out.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nResumen guardado en {out}")

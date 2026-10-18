@@ -1,7 +1,7 @@
 # edge_pose — nodo de borde con estimación de pose (tesis)
 
 Nodo de la tesis «Diseño e implementación de sistema basado en visión artificial para la detección de uso de equipos de
-protección personal en la industria de alimentos y bebidas» (UDEP, 2026). Usa YOLOv8n (3 clases: Gorra, Guante,
+protección personal en la industria de alimentos y bebidas» (UDEP, 2026). Usa YOLOv8n (3 clases: Cofia, Guante,
 Mascarilla) + YOLOv8n-pose con ByteTrack, una máquina de estados con activación por persona, reglas de colocación por
 persona y por mano, y registra cada presencia como un **episodio** con veredicto.
 

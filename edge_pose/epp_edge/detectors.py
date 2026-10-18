@@ -3,7 +3,7 @@
   - PoseDetector   : YOLOv8n-pose COCO (17 puntos clave) + ByteTrack, imgsz 320. Actúa de compuerta
                      (¿hay alguien?) y aporta los puntos clave para validar la colocación de los EPP.
                      Devuelve placement.Person (caja, id de seguimiento, puntos clave y confianzas).
-  - EPPDetector    : modelo propio (Gorra, Guante, Mascarilla), imgsz 640. Devuelve Detection en
+  - EPPDetector    : modelo propio (Cofia, Guante, Mascarilla), imgsz 640. Devuelve Detection en
                      coordenadas de píxel del frame original.
   - PersonDetector : detector de personas COCO (clase 0); se conserva solo para comparación en benchmark.
   - draw()         : anotación del frame (cajas, esqueleto, veredicto por persona, ROI, difuminado).
@@ -161,7 +161,7 @@ def blur_heads(img: np.ndarray, dets: list[Detection]) -> np.ndarray:
     """Difumina, sobre `img` (in situ), la región de la cabeza estimada a partir de las cajas de cofia y mascarilla."""
     import cv2
     for d in dets:
-        if d.label in ("Gorra", "Mascarilla"):
+        if d.label in ("Cofia", "Mascarilla"):
             y1, y2 = max(0, d.y1 - 10), min(img.shape[0], d.y2 + 40)
             x1, x2 = max(0, d.x1 - 20), min(img.shape[1], d.x2 + 20)
             roi_ = img[y1:y2, x1:x2]
@@ -175,7 +175,7 @@ def draw(frame: np.ndarray, dets: list[Detection], persons=None, status: str = "
     """Dibuja cajas de EPP, esqueleto simplificado y veredicto por persona sobre una copia del frame."""
     import cv2
 
-    colors = {"Gorra": (255, 160, 0), "Guante": (0, 200, 0), "Mascarilla": (0, 120, 255)}
+    colors = {"Cofia": (255, 160, 0), "Guante": (0, 200, 0), "Mascarilla": (0, 120, 255)}
     st_color = {"ok": (0, 200, 0), "mal": (0, 0, 255), "ausente": (0, 0, 255), "na": (160, 160, 160)}
     img = frame.copy()
     if roi is not None:
@@ -203,7 +203,7 @@ def draw(frame: np.ndarray, dets: list[Detection], persons=None, status: str = "
                     cv2.circle(img, tuple(map(int, p.pt(i))), 2, (255, 255, 255), -1)
         # veredicto por EPP: bloque de 4 líneas encima de la caja (o debajo si no hay sitio)
         lines = [(f"P{p.track_id}", (255, 255, 255))]
-        for k in ("Gorra", "Mascarilla", "Guante"):
+        for k in ("Cofia", "Mascarilla", "Guante"):
             stv = p.status.get(k, "na") if hasattr(p, "status") else "na"
             mark = {"ok": "OK", "mal": "MAL", "ausente": "NO", "na": "--"}[stv]
             why = p.reasons.get(k, "") if hasattr(p, "reasons") and stv in ("mal", "ausente") else ""

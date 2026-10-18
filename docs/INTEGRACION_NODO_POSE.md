@@ -31,7 +31,7 @@ adaptar del lado de la nube. **Fecha:** 16 de octubre de 2026.
 
 La lógica del modelo es la de la tesis y **no cambia**:
 
-- YOLOv8n entrenado con nuestro dataset (3 clases: Gorra = cofia, Guante, Mascarilla), exportado a NCNN 640.
+- YOLOv8n entrenado con nuestro dataset (3 clases: Cofia, Guante, Mascarilla), exportado a NCNN 640.
 - YOLOv8n-pose (NCNN 320) + ByteTrack.
 - Máquina de estados IDLE → PERSON_CHECK → ACTIVE con sustracción de fondo MOG2.
 - Reglas geométricas de colocación por persona y por mano.
@@ -59,12 +59,12 @@ protocolos de la versión 2.0.0** de tu repositorio, en lugar de la API `epp-api
 - `confianza_promedio` / `confianza_max`: promedio y máximo de las detecciones de EPP del episodio.
 - `frame_count`, `start_ts`, `end_ts`, `duration_seconds`, `closed_reason` (`gap` | `stopped` | `shutdown`),
   `is_simulated` (fuente = archivo de video).
-- `detections_at_capture`: cajas de Gorra / Guante / Mascarilla (clase_id 0/1/2) del frame de mayor puntaje, con
+- `detections_at_capture`: cajas de Cofia / Guante / Mascarilla (clase_id 0/1/2) del frame de mayor puntaje, con
   `bbox_xyxy_norm`. Tu detalle de evento las dibuja sobre la imagen original.
 - `edge`: `edge_version = pose-2.0.0`, `model_version` = SHA-256 corto de `model.ncnn.bin`, `camera_source`.
 - **Campos adicionales del episodio** (tu API los ignora sin romperse; quedan en Firestore y en el sidecar):
   `cumple`, `faltantes`, `mal_colocados`, `no_evaluables`, `personas_max`, `n_personas`, `personas` (estado por persona
-  y por mano), `ratios` (gorra, guante, mascarilla), `epp_fps`, `zona`, `episodio_local_id`.
+  y por mano), `ratios` (cofia, guante, mascarilla), `epp_fps`, `zona`, `episodio_local_id`.
 
 ## 2. Probarlo sin Google Cloud (5 minutos, cualquier PC)
 
@@ -114,8 +114,11 @@ Verificado el 16-oct-2026 con los videos de planta: IMG_9704 → `episodio_confo
 
 Incluido en esta rama (revisar y ajustar):
 
-1. **Etiquetas del panel** (`frontend/src/design/classColors.ts`): `Gorra → Cofia`, `Guante → Guantes`,
+1. **Etiquetas del panel** (`frontend/src/design/classColors.ts`): `Cofia → Cofia`, `Guante → Guantes`,
    `Mascarilla → Mascarilla`, `episodio_conforme → Cumple EPP`, `episodio_no_conforme → No cumple EPP`.
+   (Hasta el modelo `epp_final_v2`/2026-10-18 el modelo entregaba la clase como `"Gorra"` y esta tabla la
+   traducía a `"Cofia"` para el panel; el modelo actual ya entrega `"Cofia"` directamente, así que ahora es
+   una traducción identidad — se deja explícita por consistencia con las otras clases.)
 2. **BigQuery** (`infra/bigquery/06_episodios.sql`): recrea `raw_events` con las columnas del episodio (la tabla actual
    usa `ignore_unknown_values = TRUE`, así que hoy no se rompe, pero esos campos no llegan a BigQuery) y crea la vista
    `v_cumplimiento_diario` (episodios, conformes, tasa de cumplimiento y EPP más faltante por día).

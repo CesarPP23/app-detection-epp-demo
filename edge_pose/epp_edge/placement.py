@@ -4,7 +4,7 @@ Para cada persona detectada se asocian las cajas de EPP a sus puntos clave y se 
 geométricas relativas al tamaño de la cabeza `s`, de modo que el criterio no depende de la distancia
 a la cámara:
 
-  Gorra (cofia)   : centrada sobre la cabeza; borde superior >= 0,5·s por encima de la línea de ojos
+  Cofia           : centrada sobre la cabeza; borde superior >= 0,5·s por encima de la línea de ojos
                     (cubre la coronilla) y borde inferior <= 0,4·s por debajo de los ojos.
   Mascarilla      : la nariz cae dentro de la caja y el borde inferior queda >= 0,8·d bajo la nariz
                     (d = distancia ojos→nariz) -> cubre nariz y boca.  Si la nariz queda por encima
@@ -32,7 +32,7 @@ from .detectors import Detection
 NOSE, L_EYE, R_EYE, L_EAR, R_EAR, L_SHO, R_SHO, L_ELB, R_ELB, L_WRI, R_WRI = range(11)
 KP_CONF = 0.5
 WRIST_CONF = 0.6      # las muñecas ocluidas conservan confianza media; se exige más para juzgar el guante
-EPP_LABELS = ("Gorra", "Guante", "Mascarilla")
+EPP_LABELS = ("Cofia", "Guante", "Mascarilla")
 HANDS = ("izquierda", "derecha")
 
 
@@ -44,9 +44,9 @@ class Person:
     kc: np.ndarray          # (17,) confianza
     head_size: float = 0.0
     face_visible: bool = False
-    status: dict = field(default_factory=dict)      # {"Gorra": "ok", ...}
+    status: dict = field(default_factory=dict)      # {"Cofia": "ok", ...}
     reasons: dict = field(default_factory=dict)     # {"Mascarilla": "bajo la nariz"}
-    epp_boxes: dict = field(default_factory=dict)   # {"Gorra": [Detection], ...}
+    epp_boxes: dict = field(default_factory=dict)   # {"Cofia": [Detection], ...}
     hands: dict = field(default_factory=dict)       # {"izquierda": "gloved"|"bare"} solo muñecas visibles
 
     @property
@@ -113,7 +113,7 @@ def associate(persons: list[Person], dets: list[Detection], conf_high: float = 1
         strong = d.conf >= conf_high
         best, best_d = None, float("inf")
         for p in persons:
-            if d.label in ("Gorra", "Mascarilla"):
+            if d.label in ("Cofia", "Mascarilla"):
                 ref = eye_line(p) or (p.pt(NOSE) if p.visible(NOSE) else None)
                 limit = (2.0 if strong else 1.0) * p.head_size
             else:  # Guante -> muñeca más cercana
@@ -137,11 +137,11 @@ def associate(persons: list[Person], dets: list[Detection], conf_high: float = 1
 
 
 # --------------------------------------------------------------------------- reglas
-def eval_gorra(p: Person) -> tuple[str, str]:
+def eval_cofia(p: Person) -> tuple[str, str]:
     el = eye_line(p)
     if el is None:
         return "na", ""
-    boxes = p.epp_boxes.get("Gorra", [])
+    boxes = p.epp_boxes.get("Cofia", [])
     if not boxes:
         return "ausente", "sin cofia"
     s = p.head_size
@@ -232,7 +232,7 @@ def evaluate_frame(persons: list[Person], dets: list[Detection], conf_high: floa
     kept = associate(persons, dets, conf_high)
     for p in persons:
         p.face_visible = eye_line(p) is not None
-        for label, fn in (("Gorra", eval_gorra), ("Mascarilla", eval_mascarilla), ("Guante", eval_guante)):
+        for label, fn in (("Cofia", eval_cofia), ("Mascarilla", eval_mascarilla), ("Guante", eval_guante)):
             st, why = fn(p)
             p.status[label] = st
             if why:

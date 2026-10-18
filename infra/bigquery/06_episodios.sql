@@ -3,6 +3,9 @@
 -- Las columnas nuevas se añaden AL FINAL y en el mismo orden en raw_events y en events, porque el MERGE diario
 -- (04_merge_daily.sql) usa INSERT ROW, que exige el mismo esquema en origen y destino.
 -- Para los eventos del nodo por clase (raspberrypi/) estas columnas quedan en NULL.
+-- 2026-10-18: el modelo pasó de llamar a esta clase "Gorra" a llamarla "Cofia" (edge_pose/epp_edge/cloud_v2.py).
+-- Se conserva `ratios.gorra` para los eventos ya guardados en el lago (JSON inmutable) y se agrega `ratios.cofia`
+-- para los eventos nuevos; BigQuery no permite renombrar un campo de un STRUCT ya creado.
 
 CREATE OR REPLACE EXTERNAL TABLE `epp-detection-v1.epp_lake.raw_events` (
   schema_version INT64, event_id STRING, event_type STRING, device_id STRING,
@@ -17,7 +20,8 @@ CREATE OR REPLACE EXTERNAL TABLE `epp-detection-v1.epp_lake.raw_events` (
   edge STRUCT<edge_version STRING, model_version STRING, camera_source STRING>,
   -- episodio (nodo con pose)
   zona STRING, cumple BOOL, faltantes ARRAY<STRING>, mal_colocados ARRAY<STRING>, no_evaluables ARRAY<STRING>,
-  personas_max INT64, n_personas INT64, ratios STRUCT<gorra FLOAT64, guante FLOAT64, mascarilla FLOAT64>,
+  personas_max INT64, n_personas INT64,
+  ratios STRUCT<gorra FLOAT64, cofia FLOAT64, guante FLOAT64, mascarilla FLOAT64>,
   epp_fps FLOAT64, episodio_local_id STRING
 )
 WITH PARTITION COLUMNS (device STRING, dt DATE)
@@ -41,6 +45,10 @@ ALTER TABLE `epp-detection-v1.epp_lake.events`
   ADD COLUMN IF NOT EXISTS epp_fps FLOAT64,
   ADD COLUMN IF NOT EXISTS episodio_local_id STRING;
 
+-- Campo nuevo dentro del STRUCT ya existente (no se puede recrear como arriba sin perder las filas actuales).
+ALTER TABLE `epp-detection-v1.epp_lake.events`
+  ADD COLUMN IF NOT EXISTS ratios.cofia FLOAT64;
+
 -- Vista oro: tasa de cumplimiento por dispositivo y día (hora de Lima) y EPP más faltante.
 CREATE OR REPLACE VIEW `epp-detection-v1.epp_lake.v_cumplimiento_diario` AS
 WITH ep AS (
@@ -56,7 +64,8 @@ SELECT
   SUM(duration_seconds) AS segundos_observados,
   COUNTIF('Guante' IN UNNEST(faltantes)) AS falta_guante,
   COUNTIF('Mascarilla' IN UNNEST(faltantes)) AS falta_mascarilla,
-  COUNTIF('Gorra' IN UNNEST(faltantes)) AS falta_cofia,
+  -- 'Gorra' en episodios anteriores al 2026-10-18, 'Cofia' desde entonces (ver nota de arriba)
+  COUNTIF('Gorra' IN UNNEST(faltantes) OR 'Cofia' IN UNNEST(faltantes)) AS falta_cofia,
   COUNTIF(ARRAY_LENGTH(mal_colocados) > 0) AS con_epp_mal_colocado
 FROM ep
 GROUP BY 1, 2;

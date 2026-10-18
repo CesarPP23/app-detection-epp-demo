@@ -32,7 +32,7 @@ from .motion import MotionDetector
 from .placement import EPP_LABELS, Person, PersonStats, evaluate_frame
 from .storage import Storage, utc_now_iso
 
-CLASS_IDS = {"Gorra": 0, "Guante": 1, "Mascarilla": 2}   # ids del contrato de evento (iguales a los del modelo)
+CLASS_IDS = {"Cofia": 0, "Guante": 1, "Mascarilla": 2}   # ids del contrato de evento (iguales a los del modelo)
 
 log = logging.getLogger("epp.fsm")
 
@@ -380,10 +380,10 @@ class EPPStateMachine:
         data = {
             "ts_fin": datetime.fromtimestamp(end, timezone.utc).isoformat(timespec="milliseconds"),
             "duracion_s": round(duration, 2), "frames": ep.frames, "personas_max": ep.personas_max,
-            "ratio_gorra": ratios["Gorra"] and round(ratios["Gorra"], 3),
+            "ratio_cofia": ratios["Cofia"] and round(ratios["Cofia"], 3),
             "ratio_guante": ratios["Guante"] and round(ratios["Guante"], 3),
             "ratio_mascarilla": ratios["Mascarilla"] and round(ratios["Mascarilla"], 3),
-            "conf_gorra": confs["Gorra"], "conf_guante": confs["Guante"], "conf_mascarilla": confs["Mascarilla"],
+            "conf_cofia": confs["Cofia"], "conf_guante": confs["Guante"], "conf_mascarilla": confs["Mascarilla"],
             "cumple": cumple, "faltantes": faltantes, "mal_colocados": mal, "no_evaluables": no_eval,
             "n_personas": len(personas), "personas": personas,
             "snapshot": str(snapshot_path) if snapshot_path else None,

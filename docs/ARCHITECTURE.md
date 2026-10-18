@@ -59,7 +59,7 @@ stateDiagram-v2
     state ACTIVE {
         [*] --> Pose
         Pose: Pose - YOLOv8n-pose 320px + ByteTrack. Cajas de persona + 17 keypoints + id estable
-        EPP: EPP - YOLOv8n 640px. Gorra / Guante / Mascarilla
+        EPP: EPP - YOLOv8n 640px. Cofia / Guante / Mascarilla
         Placement: placement.py - asocia EPP a persona por distancia a keypoints (escala = tamaño de cabeza)
         Stats: PersonStats - acumula ok/mal/ausente por persona y por mano
         Pose --> EPP: personas detectadas (opcional: EPP sobre un recorte por persona)
