@@ -45,9 +45,15 @@ ALTER TABLE `epp-detection-v1.epp_lake.events`
   ADD COLUMN IF NOT EXISTS epp_fps FLOAT64,
   ADD COLUMN IF NOT EXISTS episodio_local_id STRING;
 
--- Campo nuevo dentro del STRUCT ya existente (no se puede recrear como arriba sin perder las filas actuales).
-ALTER TABLE `epp-detection-v1.epp_lake.events`
-  ADD COLUMN IF NOT EXISTS ratios.cofia FLOAT64;
+-- BigQuery NO soporta agregar un campo a un STRUCT ya existente via SQL DDL (ni con la sintaxis de
+-- ruta de puntos ratios.cofia, ni con backticks: da "Syntax error: Unexpected '.'" o "Illegal field
+-- name"). La unica forma es parchar el esquema con `bq update` (API de esquema), asi:
+--   bq show --schema --format=prettyjson epp-detection-v1:epp_lake.events > schema.json
+--   # editar schema.json: agregar {"name": "cofia", "type": "FLOAT"} dentro de fields[] del campo "ratios"
+--   bq update epp-detection-v1:epp_lake.events schema.json
+-- Ya aplicado a mano el 2026-10-18 (events.ratios.cofia existe). Si se necesita repetir esto para otro
+-- campo nuevo en el futuro, repetir el mismo procedimiento (no agregar otro ALTER TABLE con ruta de
+-- puntos aqui, no funciona).
 
 -- Vista oro: tasa de cumplimiento por dispositivo y día (hora de Lima) y EPP más faltante.
 CREATE OR REPLACE VIEW `epp-detection-v1.epp_lake.v_cumplimiento_diario` AS
