@@ -146,6 +146,41 @@ describe("Eventos", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe(`/events/${b.event_id}`));
   });
 
+  it("la captura se amplía a pantalla completa con sus etiquetas y las flechas no cambian de evento", async () => {
+    const a = makeEvent(1, { nombre_clase: "episodio_no_conforme" });
+    const b = makeEvent(2);
+    const detail = makeDetail(a, {
+      detections_at_capture: [
+        {
+          clase_id: 0,
+          nombre_clase: "Cofia",
+          confianza: 0.91,
+          bbox_xyxy_norm: [0.1, 0.2, 0.3, 0.4],
+        },
+      ],
+    });
+    server.use(
+      ...baseHandlers(),
+      http.get("*/api/devices/:id/events", () =>
+        HttpResponse.json({ items: [a, b], next_cursor: null }),
+      ),
+      http.get("*/api/events/:id", () => HttpResponse.json(detail)),
+    );
+    const { router } = renderRoute(routes, `/events/${a.event_id}`);
+    const panel = await screen.findByRole("dialog");
+    await userEvent.click(await within(panel).findByRole("button", { name: "Ampliar imagen" }));
+    const viewer = await screen.findByRole("dialog", { name: "Captura del evento" });
+    expect(within(viewer).getByText(/Cofia 91/)).toBeInTheDocument();
+    await userEvent.click(within(viewer).getByRole("button", { name: /Acercar/ }));
+    expect(within(viewer).getByText("125 %")).toBeInTheDocument();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(router.state.location.pathname).toBe(`/events/${a.event_id}`);
+    await userEvent.click(within(viewer).getByRole("button", { name: "Cerrar visor" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Captura del evento" })).not.toBeInTheDocument(),
+    );
+  });
+
   it("evento inexistente: mensaje claro y no un error genérico", async () => {
     server.use(
       ...baseHandlers(),
