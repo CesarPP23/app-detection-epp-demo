@@ -6,6 +6,7 @@ import { useEvent } from "@/api/queries";
 import type { EventDetail } from "@/api/types";
 import { hasRole, useAuth } from "@/auth/AuthProvider";
 import { formatDateTime, formatDuration, formatInt, formatPercent } from "@/design/format";
+import { CaptureLightbox } from "./CaptureLightbox";
 import { CaptureViewer } from "./CaptureViewer";
 import { ClassChip } from "./ClassChip";
 import { ConfidenceMeter } from "./ConfidenceMeter";
@@ -45,6 +46,7 @@ function Body({ ev }: { ev: EventDetail }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [boxes, setBoxes] = useState(true);
+  const [zoomOpen, setZoomOpen] = useState(false);
   const link = `${window.location.origin}/events/${ev.event_id}`;
   const expired = ev.capture_status === "expired";
   const canDownload = ev.capture_status === "ok" && !!ev.original_url;
@@ -59,6 +61,19 @@ function Body({ ev }: { ev: EventDetail }) {
         eventTime={ev.end_ts}
         confidence={ev.confianza_max}
         showBoxes={boxes}
+        onExpand={() => setZoomOpen(true)}
+      />
+      <CaptureLightbox
+        open={zoomOpen}
+        onClose={() => setZoomOpen(false)}
+        src={ev.original_url}
+        status={ev.capture_status}
+        eventClass={ev.nombre_clase}
+        detections={ev.detections_at_capture}
+        eventTime={ev.end_ts}
+        confidence={ev.confianza_max}
+        showBoxes={boxes}
+        onShowBoxes={setBoxes}
       />
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex min-h-11 items-center gap-2 text-sm text-ink md:min-h-9">
@@ -165,6 +180,7 @@ export function EventDetailPanel({ eventId, onClose, prevId, nextId, onNavigate 
   // ← / → entre eventos de la lista actual (no interfiere con campos de texto).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return; // p. ej. el visor ampliado de la captura está abierto
       const el = e.target as HTMLElement | null;
       if (el && ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName)) return;
       if (el?.getAttribute("role") === "slider") return;
