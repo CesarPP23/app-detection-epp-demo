@@ -227,8 +227,9 @@ export interface paths {
         };
         /**
          * Download Training Capture
-         * @description Zip armado al vuelo con las fotos crudas de la sesión. Rol admin: misma sensibilidad que
-         *     `EventDetail.lake_uri` (son fotos de operarios).
+         * @description Zip armado al vuelo con las fotos crudas de la sesión, enviado en streaming (sesiones de
+         *     cientos de MB). Rol admin: misma sensibilidad que `EventDetail.lake_uri` (son fotos de
+         *     operarios).
          */
         get: operations["download_training_capture_api_devices__device_id__training_captures__session_id__download_get"];
         put?: never;
