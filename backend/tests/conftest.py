@@ -110,7 +110,9 @@ def make_env(monkeypatch):
         )
         env.archive_store: dict[str, list[tuple[str, bytes]]] = {}
         env.archiver = mods["training_captures"].CaptureArchiver(
-            lister=lambda prefix: env.archive_store.get(prefix, [])
+            lister=lambda prefix: [
+                (name, lambda data=data: data) for name, data in env.archive_store.get(prefix, [])
+            ]
         )
         app = mods["main"].app
         app.dependency_overrides[mods["repo"].get_repo] = lambda: env.repo
