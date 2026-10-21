@@ -23,17 +23,14 @@ export const OTHER_COLOR = "var(--class-other)";
 const EXTRA_COLORS = ["#7a5bd6", "#d6558a", "#4a9ba8", "#8a8a3a"];
 const dynamic = new Map<string, string>();
 
-// Clases del modelo propio (edge_pose/) que equivalen a una fija: comparten su color.
-const ALIASES: Record<string, (typeof FIXED)[number]> = {
-  Cofia: "hairnet",
-  Mascarilla: "face_mask",
-  Guante: "latex_gloves",
-};
+// Clases del modelo propio (edge_pose/): mismos colores con que la Pi dibuja las cajas en el
+// video en vivo (`colors` de edge_pose/epp_edge/detectors.py:draw), para que no cambien entre
+// «En vivo» y el detalle del evento. Valores en tokens.css (--class-Cofia, ...).
+const POSE = ["Cofia", "Guante", "Mascarilla"] as const;
 
 export function classColor(name: string): string {
   if ((FIXED as readonly string[]).includes(name)) return `var(--class-${name})`;
-  const alias = ALIASES[name];
-  if (alias) return `var(--class-${alias})`;
+  if ((POSE as readonly string[]).includes(name)) return `var(--class-${name})`;
   const known = dynamic.get(name);
   if (known) return known;
   if (dynamic.size < EXTRA_SLOTS) {

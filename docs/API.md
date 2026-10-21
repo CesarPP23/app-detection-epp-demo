@@ -80,7 +80,7 @@ Todos bajo `/api`, JSON, fechas en ISO-8601 UTC. Rutas tal como están declarada
 | `POST /api/devices/{id}/training-captures` | `operator` | Pide al borde que empiece a subir fotos crudas para reentrenamiento → `TrainingCaptureStarted` (`session_id`, `started_at`); registrado en `audit_log` |
 | `POST /api/devices/{id}/training-captures/{session_id}/stop` | `operator` | Pide detener esa sesión (sin efecto si ya no es la activa) → `204`; registrado en `audit_log` |
 | `GET /api/devices/{id}/training-captures?cursor=&limit=` | `viewer` | `TrainingSessionPage`: página de `TrainingSessionSummary` + `next_cursor` |
-| `GET /api/devices/{id}/training-captures/{session_id}/download` | `admin` | Zip (`application/zip`) con las fotos de la sesión, armado al vuelo; `404` si no hay fotos, `400 sesion_demasiado_grande` por encima de `MAX_OBJECTS`; registrado en `audit_log` |
+| `GET /api/devices/{id}/training-captures/{session_id}/download` | `admin` | Zip (`application/zip`) con las fotos de la sesión, armado al vuelo y enviado en streaming (sin `Content-Length`; nunca entero en memoria, Cloud Run rechaza respuestas no streameadas de más de 32 MiB); `404` si no hay fotos, `400 sesion_demasiado_grande` por encima de `MAX_OBJECTS`; registrado en `audit_log` |
 | `WS /api/devices/{id}/live` | `viewer` | Frames binarios (protocolo en sección 3) + mensajes de texto `{"type":"status","state":"waiting"\|"live"\|"ended"}` |
 | `GET /api/events/{event_id}` | `viewer` | `EventDetail`: contrato v2 completo + `thumb_url`/`original_url` |
 | `GET /api/events/{event_id}/capture?kind=thumb\|original` | `viewer` | `302` a una URL firmada de GCS (v4, 10 min, cacheable 9 min); `kind=original` se audita (`capture_original`) |

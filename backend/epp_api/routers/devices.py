@@ -1,7 +1,8 @@
 import asyncio
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 
 from .. import auth, summary
 from ..audit import Audit, get_audit
@@ -226,19 +227,20 @@ async def download_training_capture(
     archiver: CaptureArchiver = Depends(get_archiver),
     audit: Audit = Depends(get_audit),
 ):
-    """Zip armado al vuelo con las fotos crudas de la sesión. Rol admin: misma sensibilidad que
-    `EventDetail.lake_uri` (son fotos de operarios)."""
+    """Zip armado al vuelo con las fotos crudas de la sesión, enviado en streaming (sesiones de
+    cientos de MB). Rol admin: misma sensibilidad que `EventDetail.lake_uri` (son fotos de
+    operarios)."""
     _device_or_404(device_id)
     prefix = training_capture_prefix(device_id, session_id)
     try:
-        data = await asyncio.to_thread(archiver.build_zip, prefix)
+        entries = await asyncio.to_thread(archiver.list_session, prefix)
     except SessionTooLargeError as err:
         raise ApiError(400, "sesion_demasiado_grande", str(err)) from err
     except FileNotFoundError as err:
         raise ApiError(404, "sesion_no_encontrada", "No hay fotos para esa sesión.") from err
     audit.write(user.email, "training_capture_download", device_id, session_id)
-    return Response(
-        content=data,
+    return StreamingResponse(
+        archiver.iter_zip(entries),
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{session_id}.zip"'},
     )

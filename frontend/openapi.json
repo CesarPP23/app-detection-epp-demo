@@ -2029,7 +2029,7 @@
     },
     "/api/devices/{device_id}/training-captures/{session_id}/download": {
       "get": {
-        "description": "Zip armado al vuelo con las fotos crudas de la sesión. Rol admin: misma sensibilidad que\n`EventDetail.lake_uri` (son fotos de operarios).",
+        "description": "Zip armado al vuelo con las fotos crudas de la sesión, enviado en streaming (sesiones de\ncientos de MB). Rol admin: misma sensibilidad que `EventDetail.lake_uri` (son fotos de\noperarios).",
         "operationId": "download_training_capture_api_devices__device_id__training_captures__session_id__download_get",
         "parameters": [
           {

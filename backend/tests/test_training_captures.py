@@ -92,6 +92,32 @@ def test_download_feliz_404_y_sesion_demasiado_grande(env):
     assert r.status_code == 400 and err_code(r) == "sesion_demasiado_grande"
 
 
+def test_iter_zip_baja_las_fotos_de_a_poco_y_arma_un_zip_valido(env):
+    """Regresión: el ZIP entero en memoria rompía en Cloud Run con sesiones de ~2000 fotos
+    (límite de 32 MiB por respuesta no streameada)."""
+    tc = env.mods["training_captures"]
+    loaded: list[int] = []
+
+    def loader(i: int):
+        def load() -> bytes:
+            loaded.append(i)
+            return f"foto-{i}".encode()
+
+        return load
+
+    archiver = tc.CaptureArchiver(lister=lambda prefix: [(f"{prefix}{i}.jpg", loader(i)) for i in range(50)])
+    entries = archiver.list_session("p/")
+    assert loaded == []  # listar no baja ninguna foto
+
+    chunks = archiver.iter_zip(entries)
+    first = next(chunks)
+    assert first and len(loaded) <= tc.PREFETCH + 1  # empieza a responder sin bajar todo
+    data = first + b"".join(chunks)
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        assert len(zf.namelist()) == 50
+        assert zf.read("49.jpg") == b"foto-49"
+
+
 def test_download_exige_admin(env):
     env.login_as("op@x.com")
     r = env.client.get(f"/api/devices/{DEVICE}/training-captures/x/download", headers=HDR)
