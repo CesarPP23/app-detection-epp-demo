@@ -14,7 +14,8 @@ Pasos (cada uno se puede saltar con --skip-<paso>):
   6. regress : corre el nodo sobre los videos de planta y compara los episodios con el modelo anterior
   7. resumen : imprime métricas y los comandos para desplegar al Pi (deploy_ssh.sh)
 
-Requisitos: entorno training/.venv activo (o ejecutar con .venv/Scripts/python.exe).
+Requisitos: entorno training/.venv activo (o ejecutar con .venv/Scripts/python.exe en Windows,
+.venv/bin/python en Mac/Linux).
 """
 from __future__ import annotations
 

@@ -11,6 +11,7 @@ lago de datos, Firestore, control remoto, salud y video bajo demanda).
 - Guía completa: [`docs/INTEGRACION_NODO_POSE.md`](../docs/INTEGRACION_NODO_POSE.md).
 - Revisión de Cesar antes de fusionar: [`CAMBIOS_CESAR.md`](CAMBIOS_CESAR.md) (qué se revisó y el
   único ajuste de código aplicado, con AS-IS/TO-BE).
+- Entorno local (PC/Mac, no la Pi): `pip install -r edge_pose/requirements-dev.txt` en el venv `.venv-edge`.
 - Pruebas: `python -m pytest tests -q` (15 pruebas; no necesitan Google Cloud ni modelos).
 - Prueba de extremo a extremo sin nube: `cloud_v2.emulate_dir` en `epp_edge/config.yaml`.
 - Instalación en la Pi: `bash install.sh` (systemd `epp-edge@<usuario>`, watchdog de 120 s).
