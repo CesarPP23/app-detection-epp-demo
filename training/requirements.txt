@@ -1,12 +1,18 @@
-# Entrenamiento / evaluación / exportación (laptop con GPU NVIDIA)
-# torch se instala aparte con el índice CUDA (ver README):
+# Entrenamiento / evaluación / exportación del modelo de EPP.
+# Versiones = las instaladas en la laptop Windows al 2026-10-29 (Python 3.14.7).
+# torch desde PyPI usa CPU en Windows/Linux y MPS en Mac con Apple Silicon. Con GPU NVIDIA,
+# instalar torch aparte con el índice CUDA (ver README):
 #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-ultralytics>=8.3,<9
-onnx>=1.16
-onnxslim
-onnxruntime
-ncnn
-pandas
-matplotlib
-seaborn
-pyyaml
+torch==2.14.1
+torchvision==0.29.1
+ultralytics==8.4.175
+onnx==1.23.2
+onnxslim==0.1.98
+onnxruntime==1.31.0
+ncnn==1.0.20260526
+pnnx==20260526          # export.py a NCNN lo necesita (ver docs/HANDOFF_CLAUDE_CODE.md §8)
+numpy==2.5.4
+pandas==3.0.6
+matplotlib==3.11.2
+pillow==12.3.0
+PyYAML==6.0.3

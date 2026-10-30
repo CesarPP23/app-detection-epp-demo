@@ -123,6 +123,7 @@ Primero (nuevo, 2026-10-16): confirmar que el dashboard funciona de punta a punt
 - Raspberry Pi física instalada y funcionando de punta a punta con el nodo de una sola clase (`install.sh`, 12/12 pasos, modelo exportado a NCNN en la propia Pi). **Esto fue reemplazado el 2026-10-16 por `edge_pose` — ver arriba.**
 
 ## 8. Quirks del entorno (aprendidos)
+- **Desde 2026-10-29 el trabajo sigue en una MacBook Pro M5 (macOS, zsh, `~/apps/epp-detection`).** Los quirks marcados como de Windows/PowerShell (Smart App Control, tildes en rutas con `cv2`, comillas de `gcloud`, BOM de `bq`, `CLOUDSDK_PYTHON`) aplican solo a la laptop Windows.
 - Windows 11, Git Bash y PowerShell. Python local 3.13 (la imagen usa 3.12). Sin Docker, WSL ni admin: se usa Cloud Build.
 - **gcloud/bq en Bash**: exportar `CLOUDSDK_PYTHON=/c/Python313/python.exe` (si no, `bq` busca `python3.13`).
 - **ADC**: para scripts Python con Firestore hace falta `gcloud auth application-default login` (el usuario lo ejecutó con `!`; guardado en `%APPDATA%\gcloud\application_default_credentials.json`). Se usó un venv temporal con `google-cloud-firestore` para `bootstrap_admin.py`.
@@ -158,13 +159,8 @@ Primero (nuevo, 2026-10-16): confirmar que el dashboard funciona de punta a punt
 - Las **keys de SA eliminadas pueden seguir apareciendo en `gcloud iam service-accounts keys list` por unos segundos** después de borrarlas (aunque el comando de borrado ya confirmó éxito) — es propagación/caché de listado, no un fallo del borrado; reintentar el listado tras una breve espera.
 - **Un servicio de GCP puede ser dependencia obligatoria de otro que sí se usa**: `pubsub.googleapis.com` resultó ser dependencia de `cloudbuild.googleapis.com`/`containerregistry.googleapis.com` (los deploys los necesitan); `gcloud services disable` avisa de esto y hay que respetarlo (no forzar con `disable_dependent_services=true`), aunque el script de turno (`07_pubsub_teardown.sh`) esperara poder deshabilitarlo sin problema.
 
-## 9. Trailers de commit y PR
-Commits terminan con el trailer que indique la sesión activa (cambia de una sesión a otra; usar el que diga el propio entorno, no copiar uno viejo literalmente). Ejemplo de esta sesión (2026-10-16):
-```
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01NyqsE5s3WDHT6u5BCiYQHe
-```
-La descripción del PR termina con `🤖 Generated with [Claude Code](https://claude.com/claude-code)` y el link de sesión.
+## 9. Autoría de commits y PR
+Desde 2026-10-29: commits **solo a nombre de CesarPP23**, sin `Co-Authored-By`, sin `Claude-Session` ni ninguna mención a Claude. La descripción del PR tampoco lleva "Generated with Claude Code" ni link de sesión. (Los commits anteriores con esos trailers quedan como están: no se reescribe historial.)
 
 ## 10. Commits en la rama
 Ya son demasiados para listar a mano (>80). Usar `git log --oneline origin/remediacion/auditoria-2026-10` para ver el historial completo. HEAD al cierre de esta sesión (2026-10-17): `efaa9bd` (orden descendente: `efaa9bd` ruff format → `cdb062a` fix E501 que bloqueaba el primer CI real → `bc47c0e` CHANGELOG → `a891014` borra `gcp/`+`front-end/` → `9eb786b` doc → `8d62cd3` índice Firestore → `03fefff` fix `theme-init.js` → `b8ce206` try/except en la FSM de `edge_pose` → `17e5c8b` fusión del nodo con pose de Marcelo → `21f95d5` cierre de la sesión anterior). **PR abierto hacia `main` sin mergear**: https://github.com/CesarPP23/app-detection-epp-demo/pull/1 (CI en verde).

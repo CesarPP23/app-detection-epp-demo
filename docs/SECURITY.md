@@ -31,7 +31,7 @@ sensibles) e identificadores de commits. Los valores viven exclusivamente en Sec
 | Clave de SA `raspberry-pi-worker` (archivo JSON) | Solo en la Pi física, `/etc/epp-edge/gcp-key.json`, `root:epp 0640`; **nunca** dentro del árbol de código ni en git | La Pi, para autenticarse contra Firestore y GCS (no hay Workload Identity en hardware fuera de GCP) | Manual, vía consola IAM; ver incidentes abajo — es la credencial que se filtró dos veces |
 | Clave de SA de Cloud Run | **No existe.** `platform-runtime` es una SA asociada al servicio, sin archivo de key; firma URLs con `signBlob` sobre sí misma | — | No aplica |
 | Client ID de OAuth (`GOOGLE_OAUTH_CLIENT_ID`) | Variable de entorno del backend; expuesto a propósito en `/api/auth/config` | El frontend, para iniciar el flujo de Google Identity Services | No es secreto; no se rota salvo que se recree el cliente OAuth |
-| Credenciales ADC locales (`gcloud auth application-default login`) | `%APPDATA%\gcloud\application_default_credentials.json` en la máquina de quien administra | Scripts de `infra/`, `bootstrap_admin.py`, `reconcile_lake.py` | Expiran solas; se renuevan con el mismo comando |
+| Credenciales ADC locales (`gcloud auth application-default login`) | `~/.config/gcloud/application_default_credentials.json` (Mac/Linux) o `%APPDATA%\gcloud\application_default_credentials.json` (Windows) en la máquina de quien administra | Scripts de `infra/`, `bootstrap_admin.py`, `reconcile_lake.py` | Expiran solas; se renuevan con el mismo comando |
 
 ## 3. Incidentes de credenciales filtradas (ya revocados)
 

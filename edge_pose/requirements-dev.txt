@@ -1,0 +1,15 @@
+# Entorno local de desarrollo (venv `.venv-edge` en la raíz del repo): pruebas de edge_pose,
+# `epp_edge/main.py --no-cloud` contra un video, scripts de training/ e infra/bootstrap_admin.py.
+# No es para la Pi: allí se usa requirements-pi.txt vía install.sh.
+# Versiones = las instaladas en la laptop Windows al 2026-10-29 (Python 3.14.7).
+-r ../training/requirements.txt
+opencv-python-headless==5.0.0.93
+psutil==7.2.2
+requests==2.34.2
+google-cloud-storage==3.17.0
+google-cloud-firestore==2.34.1
+lap==0.5.13
+tzdata==2026.5
+pytest==9.1.1
+# Solo para video bajo demanda (cloud_v2/cloud_sync); no estaba instalado en Windows.
+websocket-client
